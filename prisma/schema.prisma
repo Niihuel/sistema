@@ -1,0 +1,659 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// SISTEMA DE USUARIOS Y AUTENTICACIÓN AVANZADO
+// ============================================================================
+
+model User {
+  id                     Int                @id @default(autoincrement())
+  username               String             @unique @db.NVarChar(50)
+  email                  String?            @unique @db.NVarChar(255)
+  passwordHash           String             @db.NVarChar(255)
+  role                   String             @default("USER") @db.NVarChar(20)
+  firstName              String?            @db.NVarChar(100)
+  lastName               String?            @db.NVarChar(100)
+  isActive               Boolean            @default(true)
+  isEmailVerified        Boolean            @default(false)
+  twoFactorEnabled       Boolean            @default(false)
+  twoFactorSecret        String?            @db.NVarChar(100)
+  lastLoginAt            DateTime?
+  passwordExpiresAt      DateTime?
+  failedLoginAttempts    Int                @default(0)
+  lockedUntil            DateTime?
+  sessionToken           String?            @unique @db.NVarChar(500)
+  sessionExpiresAt       DateTime?
+  passwordResetToken     String?            @unique @db.NVarChar(100)
+  passwordResetExpiresAt DateTime?
+  emailVerificationToken String?            @unique @db.NVarChar(100)
+  createdBy              String?            @db.NVarChar(50)
+  updatedBy              String?            @db.NVarChar(50)
+  deletedAt              DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  employeeId             Int?               @unique
+  employee               Employee?          @relation(fields: [employeeId], references: [id])
+  userRoles              UserRole[]
+  userPermissions        UserPermission[]
+  userSessions           UserSession[]
+  auditLogs              AuditLog[]
+  createdByLogs          AuditLog[]         @relation("CreatedByUser")
+  updatedByLogs          AuditLog[]         @relation("UpdatedByUser")
+  notifications          Notification[]
+
+  @@index([username])
+  @@index([email])
+  @@index([isActive])
+  @@index([role])
+  @@index([employeeId])
+  @@index([sessionToken])
+  @@index([failedLoginAttempts])
+  @@index([lockedUntil])
+  @@index([lastLoginAt])
+}
+
+model Employee {
+  id                Int               @id @default(autoincrement())
+  firstName         String            @db.NVarChar(100)
+  lastName          String            @db.NVarChar(100)
+  area              String?           @db.NVarChar(100)
+  email             String?           @unique @db.NVarChar(255)
+  phone             String?           @db.NVarChar(50)
+  position          String?           @db.NVarChar(100)
+  status            String            @default("ACTIVE") @db.NVarChar(20)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User?
+  calipsoAccounts   CalipsoAccount[]
+  emailAccounts     EmailAccount[]
+  equipmentAssigned Equipment[]       @relation("AssignedEquipment")
+  inventoryAssigned InventoryItem[]   @relation("AssignedInventory")
+  purchaseRequests  PurchaseRequest[] @relation("PurchaseRequests")
+  qnapAccounts      QnapAccount[]
+  ticketsRequested  Ticket[]          @relation("RequestedTickets")
+  ticketsAssigned   Ticket[]          @relation("AssignedTickets")
+  windowsAccounts   WindowsAccount[]
+
+  @@index([firstName])
+  @@index([lastName])
+  @@index([area])
+  @@index([email])
+  @@index([status])
+}
+
+// ============================================================================
+// SISTEMA DE ROLES Y PERMISOS JERÁRQUICO
+// ============================================================================
+
+model Role {
+  id                 Int              @id @default(autoincrement())
+  name               String           @unique @db.NVarChar(50)
+  displayName        String           @db.NVarChar(100)
+  description        String?          @db.NVarChar(500)
+  color              String?          @db.NVarChar(7) // Color hex #RRGGBB
+  icon               String?          @db.NVarChar(50)
+  isSystem           Boolean          @default(false)
+  isActive           Boolean          @default(true)
+  level              Int              @default(50) // Nivel jerárquico (mayor = más permisos)
+  priority           Int              @default(500) // Prioridad de asignación
+  maxUsers           Int?             // Límite máximo de usuarios con este rol
+  parentRoleId       Int?
+  permissions        String?          @db.Text // JSON de permisos adicionales específicos
+  restrictions       String?          @db.Text // JSON de restricciones específicas
+  conditions         String?          @db.Text // JSON de condiciones de asignación
+  metadata           String?          @db.Text // JSON de metadatos adicionales
+  createdBy          String?          @db.NVarChar(50)
+  updatedBy          String?          @db.NVarChar(50)
+  deletedAt          DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  rolePermissions    RolePermission[]
+  userRoles          UserRole[]
+  parentRole         Role?            @relation("RoleHierarchy", fields: [parentRoleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childRoles         Role[]           @relation("RoleHierarchy")
+
+  @@index([name])
+  @@index([isActive])
+  @@index([isSystem])
+  @@index([level])
+  @@index([parentRoleId])
+  @@index([priority])
+}
+
+model Permission {
+  id                  Int                   @id @default(autoincrement())
+  name                String                @unique @db.NVarChar(100)
+  displayName         String                @db.NVarChar(150)
+  description         String?               @db.NVarChar(500)
+  category            String                @db.NVarChar(50)
+  resource            String                @db.NVarChar(50)
+  action              String                @db.NVarChar(30)
+  scope               String                @default("ALL") @db.NVarChar(20)
+  conditions          String?               @db.Text
+  isSystem            Boolean               @default(false)
+  isActive            Boolean               @default(true)
+  requiresMFA         Boolean               @default(false)
+  riskLevel           String                @default("LOW") @db.NVarChar(10)
+  auditRequired       Boolean               @default(true)
+  createdBy           String?               @db.NVarChar(50)
+  updatedBy           String?               @db.NVarChar(50)
+  deletedAt           DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  rolePermissions     RolePermission[]
+  userPermissions     UserPermission[]
+  permissionGroups    PermissionGroupItem[]
+
+  @@unique([resource, action, scope], name: "unique_permission_definition")
+  @@index([name])
+  @@index([category])
+  @@index([resource])
+  @@index([action])
+  @@index([scope])
+  @@index([isActive])
+  @@index([riskLevel])
+}
+
+model RolePermission {
+  id           Int        @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  conditions   String?    @db.Text // JSON de condiciones específicas para esta combinación
+  grantedBy    String?    @db.NVarChar(50)
+  grantedAt    DateTime   @default(now())
+  isActive     Boolean    @default(true)
+  expiresAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model UserRole {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  roleId       Int
+  assignedBy   String?  @db.NVarChar(50)
+  assignedAt   DateTime @default(now())
+  isActive     Boolean  @default(true)
+  isPrimary    Boolean  @default(false) // Rol principal del usuario
+  isTemporary  Boolean  @default(false)
+  expiresAt    DateTime?
+  reason       String?  @db.NVarChar(500) // Razón de asignación
+  conditions   String?  @db.Text // JSON de condiciones específicas
+  metadata     String?  @db.Text // JSON de metadatos adicionales
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  role         Role     @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([isActive])
+  @@index([isPrimary])
+  @@index([expiresAt])
+}
+
+model UserPermission {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  permissionId Int
+  grantedBy    String?    @db.NVarChar(50)
+  grantedAt    DateTime   @default(now())
+  isDenied     Boolean    @default(false) // true = permiso negado explícitamente
+  isActive     Boolean    @default(true)
+  expiresAt    DateTime?
+  reason       String?    @db.NVarChar(500)
+  conditions   String?    @db.Text // JSON de condiciones específicas
+  metadata     String?    @db.Text // JSON de metadatos adicionales
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@index([isDenied])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model PermissionGroup {
+  id          Int                   @id @default(autoincrement())
+  name        String                @unique @db.NVarChar(100)
+  displayName String                @db.NVarChar(150)
+  description String?               @db.NVarChar(500)
+  category    String                @db.NVarChar(50)
+  color       String?               @db.NVarChar(7)
+  icon        String?               @db.NVarChar(50)
+  isSystem    Boolean               @default(false)
+  isActive    Boolean               @default(true)
+  priority    Int                   @default(500)
+  createdBy   String?               @db.NVarChar(50)
+  updatedBy   String?               @db.NVarChar(50)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  permissions PermissionGroupItem[]
+
+  @@index([name])
+  @@index([category])
+  @@index([isActive])
+}
+
+model PermissionGroupItem {
+  id           Int             @id @default(autoincrement())
+  groupId      Int
+  permissionId Int
+  isRequired   Boolean         @default(false) // Permiso obligatorio en el grupo
+  priority     Int             @default(500)
+  createdAt    DateTime        @default(now())
+  group        PermissionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  permission   Permission      @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, permissionId])
+  @@index([groupId])
+  @@index([permissionId])
+}
+
+model UserSession {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  sessionToken String   @unique @db.NVarChar(500)
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  ipAddress    String?  @db.NVarChar(45)
+  userAgent    String?  @db.NVarChar(500)
+  lastActivity DateTime @default(now())
+  metadata     String?  @db.Text // JSON con información adicional de la sesión
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([lastActivity])
+}
+
+// ============================================================================
+// MODELOS DE NEGOCIO EXISTENTES (Equipos, Tickets, etc.)
+// ============================================================================
+
+model Equipment {
+  id                   Int       @id @default(autoincrement())
+  name                 String    @db.NVarChar(200)
+  type                 String    @db.NVarChar(50)
+  status               String    @default("Activo") @db.NVarChar(50)
+  location             String?   @db.NVarChar(200)
+  serialNumber         String?   @unique @db.NVarChar(100)
+  assignedToId         Int?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  ip                   String?   @db.NVarChar(45)
+  macAddress           String?   @db.NVarChar(17)
+  area                 String?   @db.NVarChar(100)
+  brand                String?   @db.NVarChar(100)
+  cpuNumber            String?   @db.NVarChar(100)
+  dvdUnit              Boolean   @default(false)
+  ipAddress            String?   @db.NVarChar(45)
+  model                String?   @db.NVarChar(100)
+  motherboard          String?   @db.NVarChar(100)
+  notes                String?   @db.Text
+  operatingSystem      String?   @db.NVarChar(100)
+  processor            String?   @db.NVarChar(100)
+  purchaseDate         DateTime?
+  ram                  String?   @db.NVarChar(50)
+  screenSize           String?   @db.NVarChar(20)
+  storage              String?   @db.NVarChar(100)
+  storageCapacity      String?   @db.NVarChar(50)
+  storageType          String?   @db.NVarChar(20)
+  isPersonalProperty   Boolean   @default(false)
+  assignedTo           Employee? @relation("AssignedEquipment", fields: [assignedToId], references: [id])
+
+  @@index([type])
+  @@index([status])
+  @@index([ip])
+  @@index([area])
+  @@index([assignedToId])
+}
+
+model Ticket {
+  id             Int       @id @default(autoincrement())
+  title          String    @db.NVarChar(300)
+  description    String?   @db.Text
+  status         String    @default("OPEN") @db.NVarChar(30)
+  priority       String    @default("MEDIUM") @db.NVarChar(20)
+  requestorId    Int
+  technicianId   Int?
+  solution       String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  area           String?   @db.NVarChar(100)
+  category       String?   @db.NVarChar(100)
+  ipAddress      String?   @db.NVarChar(45)
+  resolutionTime String?   @db.NVarChar(50)
+  requestor      Employee  @relation("RequestedTickets", fields: [requestorId], references: [id], onUpdate: NoAction)
+  technician     Employee? @relation("AssignedTickets", fields: [technicianId], references: [id], onUpdate: NoAction)
+
+  @@index([status])
+  @@index([priority])
+  @@index([technicianId])
+  @@index([requestorId])
+}
+
+model Printer {
+  id           Int           @id @default(autoincrement())
+  model        String        @db.NVarChar(100)
+  serialNumber String?       @unique @db.NVarChar(100)
+  area         String?       @db.NVarChar(100)
+  location     String?       @db.NVarChar(200)
+  ip           String?       @unique @db.NVarChar(45)
+  macAddress   String?       @db.NVarChar(17)
+  status       String        @default("ACTIVE") @db.NVarChar(30)
+  notes        String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  consumables  Consumable[]
+  replacements Replacement[]
+
+  @@index([status])
+  @@index([area])
+}
+
+model Consumable {
+  id                Int           @id @default(autoincrement())
+  itemName          String        @db.NVarChar(200)
+  color             String?       @db.NVarChar(50)
+  quantityAvailable Int           @default(0)
+  status            String        @default("OK") @db.NVarChar(30)
+  printerId         Int?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  printer           Printer?      @relation(fields: [printerId], references: [id])
+  replacements      Replacement[]
+
+  @@index([printerId])
+  @@index([status])
+}
+
+model Replacement {
+  id              Int         @id @default(autoincrement())
+  printerId       Int
+  consumableId    Int?
+  replacementDate DateTime
+  completionDate  DateTime?
+  rendimientoDays Int?
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  consumable      Consumable? @relation(fields: [consumableId], references: [id], onUpdate: NoAction)
+  printer         Printer     @relation(fields: [printerId], references: [id], onUpdate: NoAction)
+
+  @@index([printerId])
+  @@index([consumableId])
+}
+
+model Purchase {
+  id            Int      @id @default(autoincrement())
+  requestId     String?  @unique @db.NVarChar(50)
+  itemName      String   @db.NVarChar(200)
+  requestedQty  Int      @default(0)
+  requestedDate DateTime?
+  receivedQty   Int      @default(0)
+  receivedDate  DateTime?
+  pendingQty    Int      @default(0)
+  status        String   @default("PENDING") @db.NVarChar(30)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+}
+
+model CatalogArea {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.NVarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InventoryItem {
+  id                   Int       @id @default(autoincrement())
+  name                 String    @db.NVarChar(200)
+  category             String    @db.NVarChar(100)
+  brand                String?   @db.NVarChar(100)
+  model                String?   @db.NVarChar(100)
+  serialNumber         String?   @unique @db.NVarChar(100)
+  quantity             Int       @default(0)
+  location             String?   @db.NVarChar(200)
+  status               String    @default("AVAILABLE") @db.NVarChar(30)
+  condition            String    @default("NEW") @db.NVarChar(30)
+  notes                String?   @db.Text
+  assignedToId         Int?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  isPersonalProperty   Boolean   @default(false)
+  assignedTo           Employee? @relation("AssignedInventory", fields: [assignedToId], references: [id])
+
+  @@index([category])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model WindowsAccount {
+  id            Int       @id @default(autoincrement())
+  employeeId    Int
+  username      String    @db.NVarChar(100)
+  domain        String?   @default("PRETENSA") @db.NVarChar(50)
+  password      String?   @db.NVarChar(200)
+  profilePath   String?   @db.NVarChar(500)
+  homeDirectory String?   @db.NVarChar(500)
+  groups        String?   @db.Text
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, username, domain])
+  @@index([employeeId])
+  @@index([username])
+}
+
+model QnapAccount {
+  id                Int       @id @default(autoincrement())
+  employeeId        Int
+  username          String    @db.NVarChar(100)
+  password          String?   @db.NVarChar(200)
+  userGroup         String?   @db.NVarChar(100)
+  folderPermissions String?   @db.Text
+  quotaLimit        String?   @db.NVarChar(50)
+  isActive          Boolean   @default(true)
+  lastAccess        DateTime?
+  notes             String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  employee          Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, username])
+  @@index([employeeId])
+  @@index([username])
+}
+
+model CalipsoAccount {
+  id          Int       @id @default(autoincrement())
+  employeeId  Int
+  username    String    @db.NVarChar(100)
+  password    String?   @db.NVarChar(200)
+  profile     String?   @db.NVarChar(100)
+  permissions String?   @db.Text
+  modules     String?   @db.Text
+  isActive    Boolean   @default(true)
+  lastLogin   DateTime?
+  notes       String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, username])
+  @@index([employeeId])
+  @@index([username])
+}
+
+model EmailAccount {
+  id           Int       @id @default(autoincrement())
+  employeeId   Int
+  email        String    @unique @db.NVarChar(255)
+  password     String?   @db.NVarChar(200)
+  accountType  String    @db.NVarChar(50)
+  forwardingTo String?   @db.NVarChar(255)
+  aliases      String?   @db.Text
+  isActive     Boolean   @default(true)
+  lastSync     DateTime?
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([email])
+  @@index([accountType])
+}
+
+model BackupLog {
+  id           Int      @id @default(autoincrement())
+  backupName   String   @db.NVarChar(200)
+  backupType   String   @db.NVarChar(50)
+  source       String   @db.NVarChar(500)
+  destination  String   @db.NVarChar(500)
+  status       String   @db.NVarChar(30)
+  startTime    DateTime?
+  endTime      DateTime?
+  duration     Int?
+  sizeBytes    BigInt?
+  errorMessage String?  @db.Text
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+  @@index([backupType])
+  @@index([startTime])
+}
+
+model PurchaseRequest {
+  id            Int       @id @default(autoincrement())
+  requestNumber String?   @unique @db.NVarChar(50)
+  requestorId   Int?
+  itemName      String    @db.NVarChar(200)
+  category      String    @db.NVarChar(100)
+  description   String?   @db.Text
+  justification String?   @db.Text
+  quantity      Int       @default(1)
+  estimatedCost Decimal?  @db.Decimal(10, 2)
+  priority      String    @db.NVarChar(30)
+  status        String    @default("PENDING") @db.NVarChar(30)
+  approvedBy    String?   @db.NVarChar(100)
+  approvalDate  DateTime?
+  purchaseDate  DateTime?
+  receivedDate  DateTime?
+  vendor        String?   @db.NVarChar(200)
+  actualCost    Decimal?  @db.Decimal(10, 2)
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  requestor     Employee? @relation("PurchaseRequests", fields: [requestorId], references: [id])
+
+  @@index([status])
+  @@index([priority])
+  @@index([requestorId])
+  @@index([category])
+}
+
+// ============================================================================
+// AUDITORÍA Y LOGGING AVANZADO
+// ============================================================================
+
+model AuditLog {
+  id             Int       @id @default(autoincrement())
+  userId         Int?
+  userName       String?   @db.NVarChar(100)
+  sessionId      String?   @db.NVarChar(100)
+  action         String    @db.NVarChar(100) // 'CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', etc.
+  entity         String    @db.NVarChar(100) // 'User', 'Equipment', 'Ticket', etc.
+  entityId       Int?
+  oldValue       String?   @db.Text // JSON del estado anterior
+  newValue       String?   @db.Text // JSON del estado nuevo
+  changes        String?   @db.Text // JSON de los cambios específicos
+  ipAddress      String?   @db.NVarChar(45)
+  userAgent      String?   @db.NVarChar(500)
+  source         String?   @db.NVarChar(50) // 'WEB', 'API', 'SYSTEM', 'MOBILE'
+  category       String?   @db.NVarChar(50) // 'SECURITY', 'DATA', 'SYSTEM', 'USER'
+  severity       String    @default("INFO") @db.NVarChar(20) // 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+  description    String?   @db.NVarChar(500)
+  isSuccess      Boolean   @default(true)
+  errorMessage   String?   @db.Text
+  duration       Int? // Duración en milisegundos
+  endpoint       String?   @db.NVarChar(200) // Endpoint API si aplica
+  method         String?   @db.NVarChar(10) // HTTP method si aplica
+  statusCode     Int? // HTTP status code si aplica
+  requestId      String?   @db.NVarChar(100) // ID único de la request
+  tags           String?   @db.Text // JSON array de tags
+  metadata       String?   @db.Text // JSON de metadatos adicionales
+  requiresReview Boolean   @default(false)
+  reviewedBy     String?   @db.NVarChar(50)
+  reviewedAt     DateTime?
+  expiresAt      DateTime? // Para limpieza automática
+  createdBy      String?   @db.NVarChar(50)
+  createdAt      DateTime  @default(now())
+  user           User?     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdByUser  User?     @relation("CreatedByUser", fields: [createdBy], references: [username], onDelete: NoAction, onUpdate: NoAction)
+  updatedByUser  User?     @relation("UpdatedByUser", fields: [reviewedBy], references: [username], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId])
+  @@index([userName])
+  @@index([sessionId])
+  @@index([entity])
+  @@index([action])
+  @@index([severity])
+  @@index([category])
+  @@index([source])
+  @@index([isSuccess])
+  @@index([requiresReview])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int?
+  type      String    @db.NVarChar(50)
+  title     String    @db.NVarChar(200)
+  message   String?   @db.Text
+  priority  String    @default("NORMAL") @db.NVarChar(20)
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  data      String?   @db.Text
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+}

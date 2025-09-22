@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sin Conexión - Sistema Interno</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 32rem;
+            width: 100%;
+        }
+
+        .icon-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .icon-circle {
+            width: 5rem;
+            height: 5rem;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+        }
+
+        .icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            color: #ef4444;
+        }
+
+        h1 {
+            font-size: 3.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #ef4444, #dc2626);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-info {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+        }
+
+        .status-item:not(:last-child) {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+
+        .status-value {
+            font-weight: 500;
+            color: #ef4444;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .additional-info {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.875rem;
+            margin-top: 2rem;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid rgba(239, 68, 68, 0.2);
+            border-top-color: #ef4444;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon-wrapper">
+            <div class="icon-circle">
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"/>
+                </svg>
+            </div>
+        </div>
+
+        <h1>OFFLINE</h1>
+        <h2>Sin Conexión al Servidor</h2>
+        <p>
+            No se puede conectar con el servidor. Verifica tu conexión a internet o que el servidor esté en funcionamiento.
+        </p>
+
+        <div class="status-info">
+            <div class="status-item">
+                <span class="status-label">Estado de Red</span>
+                <span class="status-value" id="network-status">
+                    Verificando<span class="loader"></span>
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Última Conexión</span>
+                <span class="status-value" id="last-connection">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Modo</span>
+                <span class="status-value">Offline / PWA</span>
+            </div>
+        </div>
+
+        <button class="button" onclick="tryReconnect()">
+            Intentar Reconectar
+        </button>
+
+        <div class="additional-info">
+            Esta aplicación funciona en modo offline con funcionalidad limitada.<br>
+            Los datos se sincronizarán cuando se restablezca la conexión.
+        </div>
+    </div>
+
+    <script>
+        // Check network status
+        function updateNetworkStatus() {
+            const statusEl = document.getElementById('network-status');
+            if (navigator.onLine) {
+                statusEl.innerHTML = '<span style="color: #10b981;">Online</span>';
+            } else {
+                statusEl.innerHTML = '<span style="color: #ef4444;">Offline</span>';
+            }
+        }
+
+        // Update last connection time
+        function updateLastConnection() {
+            const lastConnectionEl = document.getElementById('last-connection');
+            const lastConnection = localStorage.getItem('lastOnlineTime');
+            if (lastConnection) {
+                const date = new Date(lastConnection);
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000 / 60); // minutes
+
+                if (diff < 1) {
+                    lastConnectionEl.textContent = 'Hace unos segundos';
+                } else if (diff < 60) {
+                    lastConnectionEl.textContent = `Hace ${diff} minuto${diff > 1 ? 's' : ''}`;
+                } else {
+                    const hours = Math.floor(diff / 60);
+                    lastConnectionEl.textContent = `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
+                }
+            } else {
+                lastConnectionEl.textContent = 'Sin registro';
+            }
+        }
+
+        // Try to reconnect
+        function tryReconnect() {
+            const button = event.target;
+            button.disabled = true;
+            button.innerHTML = 'Reconectando...';
+
+            // Try to fetch the main page
+            fetch('/')
+                .then(response => {
+                    if (response.ok) {
+                        localStorage.setItem('lastOnlineTime', new Date().toISOString());
+                        window.location.href = '/';
+                    } else {
+                        throw new Error('Server not available');
+                    }
+                })
+                .catch(() => {
+                    button.disabled = false;
+                    button.innerHTML = 'Intentar Reconectar';
+                    alert('No se pudo establecer conexión con el servidor. Por favor, intenta más tarde.');
+                });
+        }
+
+        // Initialize
+        updateNetworkStatus();
+        updateLastConnection();
+
+        // Update network status on change
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        // Auto-retry every 30 seconds if online
+        setInterval(() => {
+            if (navigator.onLine) {
+                fetch('/')
+                    .then(response => {
+                        if (response.ok) {
+                            localStorage.setItem('lastOnlineTime', new Date().toISOString());
+                            window.location.href = '/';
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

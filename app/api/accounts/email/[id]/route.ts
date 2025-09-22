@@ -1,0 +1,69 @@
+import { NextResponse } from "next/server"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: idParam } = await params
+    const id = parseInt(idParam)
+    const data = await request.json()
+
+    const account = await prisma.emailAccount.update({
+      where: { id },
+      data: {
+        employeeId: data.employeeId,
+        email: data.email,
+        password: data.password || null,
+        accountType: data.accountType || 'PRETENSA',
+        forwardingTo: data.forwardingTo || null,
+        aliases: data.aliases || null,
+        isActive: data.isActive ?? true,
+        notes: data.notes || null
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            area: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(account)
+  } catch (error) {
+    console.error('Error updating Email account:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar cuenta de email' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: idParam } = await params
+    const id = parseInt(idParam)
+
+    await prisma.emailAccount.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting Email account:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar cuenta de email' },
+      { status: 500 }
+    )
+  }
+}
