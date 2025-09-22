@@ -6,8 +6,8 @@ import { useParams, useRouter } from "next/navigation"
 import Button from "@/components/button"
 import Modal from "@/components/modal"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
 import { validateForm, ValidationRule } from "@/lib/validation"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface User {
   id: number
@@ -46,7 +46,8 @@ export default function UserDetailPage() {
   // Modal states
   const [isNewInventoryOpen, setIsNewInventoryOpen] = useState(false)
   const [inventoryForm, setInventoryForm] = useState({ name: "", category: "HARDWARE", status: "AVAILABLE" })
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   const fetchUserData = async () => {
@@ -97,12 +98,12 @@ export default function UserDetailPage() {
     const validation = validateForm(inventoryForm, validationRules)
     if (!validation.isValid) {
       setFormErrors(validation.errors)
-      setNotification({ type: 'error', message: validation.firstError || 'Por favor corrige los errores en el formulario' })
+      showError(validation.firstError || 'Por favor corrige los errores en el formulario')
       return
     }
 
     if (!employee) {
-      setNotification({ type: 'error', message: 'No hay empleado asociado para asignar el inventario' })
+      showError('No hay empleado asociado para asignar el inventario')
       return
     }
 
@@ -120,14 +121,14 @@ export default function UserDetailPage() {
       if (res.ok) {
         setIsNewInventoryOpen(false)
         setInventoryForm({ name: "", category: "HARDWARE", status: "AVAILABLE" })
-        setNotification({ type: 'success', message: 'Item de inventario creado correctamente' })
+        showSuccess('Item de inventario creado correctamente')
       } else {
         const errorData = await res.json()
-        setNotification({ type: 'error', message: errorData.error || 'Error creando item de inventario' })
+        showError(errorData.error || 'Error creando item de inventario')
       }
     } catch (e) {
       console.error('Error creating inventory item', e)
-      setNotification({ type: 'error', message: 'Error creando item de inventario' })
+      showError('Error creando item de inventario')
     }
   }
 
@@ -351,12 +352,6 @@ export default function UserDetailPage() {
         </div>
       </Modal>
 
-      <CustomNotification
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-        onClose={() => setNotification(null)}
-      />
     </div>
   )
 }

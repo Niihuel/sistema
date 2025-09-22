@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import Modal from "@/components/modal"
 import ConfirmDialog from "@/components/confirm-dialog"
-import CustomNotification from "@/components/notification"
 
 type Role = { id: number; name: string }
 type Permission = { id: number; roleId: number; resource: string; level: string }
@@ -26,7 +25,8 @@ export default function RolesPage() {
   const [activeRole, setActiveRole] = useState<Role | null>(null)
   const [newPermission, setNewPermission] = useState<{ resource: string; level: string }>({ resource: "", level: "READ" })
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; permission?: Permission; role?: Role } | null>({ open: false })
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
 
   async function load() {
     setError(null)
@@ -59,11 +59,11 @@ export default function RolesPage() {
       if (!res.ok) throw new Error(data?.error || "Error creando rol")
       setNewRole("")
       await load()
-      setNotification({ type: 'success', message: 'Rol creado correctamente' })
+      showSuccess('Rol creado correctamente')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       setError(msg)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -79,11 +79,11 @@ export default function RolesPage() {
       if (!res.ok) throw new Error(data?.error || "Error creando permiso")
       setNewPermission({ resource: "", level: "READ" })
       await load()
-      setNotification({ type: 'success', message: 'Permiso agregado correctamente' })
+      showSuccess('Permiso agregado correctamente')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       setError(msg)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -98,11 +98,11 @@ export default function RolesPage() {
         throw new Error(data?.error || "Error eliminando permiso")
       }
       await load()
-      setNotification({ type: 'success', message: 'Permiso eliminado correctamente' })
+      showSuccess('Permiso eliminado correctamente')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       setError(msg)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -117,11 +117,11 @@ export default function RolesPage() {
         throw new Error(data?.error || "Error eliminando rol")
       }
       await load()
-      setNotification({ type: 'success', message: 'Rol eliminado correctamente' })
+      showSuccess('Rol eliminado correctamente')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       setError(msg)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -136,11 +136,11 @@ export default function RolesPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || "Error asignando rol")
       setAssign({})
-      setNotification({ type: 'success', message: 'Rol asignado correctamente' })
+      showSuccess('Rol asignado correctamente')
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       setError(msg)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -262,13 +262,6 @@ export default function RolesPage() {
         }}
       />
 
-      {notification && (
-        <CustomNotification
-          type={notification.type}
-          message={notification.message}
-          isVisible={notification !== null}
-          onClose={() => setNotification(null)}
-        />
       )}
     </div>
   )

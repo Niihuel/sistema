@@ -1,101 +1,177 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  const requestId = Math.random().toString(36).substring(7)
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
 
-  // Log for debugging
-  if (process.env.NODE_ENV !== 'production' || pathname === '/') {
-    console.log(`[Middleware ${requestId}] Path: ${pathname}`)
-  }
+  try {
+    const pathname = request.nextUrl?.pathname || '/';
 
-  // Skip middleware for API routes and static assets
-  if (
-    pathname.startsWith('/api/') ||
-    pathname.startsWith('/_next/') ||
-    pathname.includes('.') // Skip files with extensions
-  ) {
-    return NextResponse.next()
-  }
+    // Skip middleware for static assets and API routes
+    const shouldSkip = (
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/_next/') ||
+      pathname.includes('.') ||
+      pathname === '/favicon.ico' ||
+      pathname.startsWith('/public/') ||
+      pathname.startsWith('/static/') ||
+      pathname.startsWith('/images/') ||
+      pathname.startsWith('/icons/') ||
+      pathname.includes('__webpack') ||
+      pathname.includes('hot-update') ||
+      pathname.includes('.map') ||
+      /\.(css|js|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot)$/i.test(pathname)
+    );
 
-  // Verificar si hay token de autenticación
-  const token = request.cookies.get('auth_token')?.value
-
-  // Normalize pathname - remove trailing slash for comparison
-  const normalizedPath = pathname.endsWith('/') && pathname !== '/'
-    ? pathname.slice(0, -1)
-    : pathname
-
-  // Handle root path with safe redirect
-  if (pathname === '/') {
-    // Prevent redirect loops by checking referrer
-    const referrer = request.headers.get('referer')
-    const fromDashboard = referrer?.includes('/dashboard')
-    const fromLogin = referrer?.includes('/login')
-
-    if (token && !fromDashboard) {
-      console.log(`[Middleware ${requestId}] Root -> Dashboard (authenticated)`)
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    } else if (!token && !fromLogin) {
-      console.log(`[Middleware ${requestId}] Root -> Login (not authenticated)`)
-      return NextResponse.redirect(new URL('/login', request.url))
+    if (shouldSkip) {
+      return NextResponse.next();
     }
 
-    // If we're coming from dashboard or login, don't redirect again
-    return NextResponse.next()
-  }
+    // Get token (simplified verification for Edge Runtime)
+    let token: string | undefined;
+    let isValidToken = false;
 
-  // Rutas públicas que no requieren autenticación
-  const publicRoutes = ['/login', '/auth-error', '/unauthorized']
-  const isPublicRoute = publicRoutes.some(route => normalizedPath === route || normalizedPath.startsWith(route + '/'))
+    try {
+      const authCookie = request.cookies?.get('auth_token');
+      token = authCookie?.value;
 
-  // Rutas que requieren autenticación
-  const protectedRoutes = [
-    '/dashboard', '/admin', '/areas', '/backups', '/compiler', '/consumables',
-    '/employees', '/equipment', '/inventory', '/printers', '/purchase-requests',
-    '/purchases', '/replacements', '/roles', '/tickets', '/users'
-  ]
-  const isProtectedRoute = protectedRoutes.some(route => normalizedPath === route || normalizedPath.startsWith(route + '/'))
-
-  // Si es una ruta protegida y no hay token, redirigir a login
-  if (isProtectedRoute && !token) {
-    console.log(`[Middleware ${requestId}] Protected route without token: ${pathname}`)
-    // Guardar la URL de destino para redirigir después del login
-    const url = new URL('/login', request.url)
-    if (pathname !== '/dashboard') {
-      url.searchParams.set('redirect', pathname)
+      // Basic token format validation (Edge Runtime compatible)
+      if (token && typeof token === 'string' && token.length > 0) {
+        // Simple JWT format check (3 parts separated by dots)
+        const parts = token.split('.');
+        isValidToken = parts.length === 3 && parts.every(part => part.length > 0);
+      }
+    } catch (tokenError) {
+      token = undefined;
+      isValidToken = false;
     }
-    return NextResponse.redirect(url)
-  }
 
-  // Si está autenticado y trata de acceder a login, redirigir a dashboard
-  if (token && (normalizedPath === '/login' || pathname === '/login')) {
-    console.log(`[Middleware ${requestId}] Login with token -> Dashboard`)
-    // Check if there's a redirect param
-    const redirectTo = request.nextUrl.searchParams.get('redirect')
-    if (redirectTo && redirectTo.startsWith('/') && !redirectTo.includes('login')) {
-      return NextResponse.redirect(new URL(redirectTo, request.url))
+    const normalizedPath = pathname.endsWith('/') && pathname !== '/'
+      ? pathname.slice(0, -1)
+      : pathname;
+
+    // Handle root path redirects
+    if (pathname === '/') {
+      try {
+        const referrer = request.headers?.get('referer') || '';
+        const fromDashboard = referrer.includes('/dashboard');
+        const fromLogin = referrer.includes('/login');
+
+        if (isValidToken && !fromDashboard) {
+          const dashboardUrl = new URL('/dashboard', request.url);
+          return NextResponse.redirect(dashboardUrl);
+        } else if (!isValidToken && !fromLogin) {
+          const loginUrl = new URL('/login', request.url);
+          return NextResponse.redirect(loginUrl);
+        }
+
+        return NextResponse.next();
+      } catch (redirectError) {
+        return NextResponse.next();
+      }
     }
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
 
-  // Add request ID to headers for tracking
-  const response = NextResponse.next()
-  response.headers.set('X-Request-ID', requestId)
-  return response
+    // Define public routes (accessible without authentication)
+    const publicRoutes = ['/login', '/auth-error', '/unauthorized'];
+    const isPublicRoute = publicRoutes.some(route => {
+      try {
+        return normalizedPath === route || normalizedPath.startsWith(route + '/');
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Define protected routes (require authentication and permissions)
+    const protectedRoutes = [
+      '/dashboard', '/admin', '/areas', '/backups', '/compiler', '/consumables',
+      '/employees', '/equipment', '/inventory', '/printers', '/purchase-requests',
+      '/purchases', '/replacements', '/roles', '/tickets', '/users'
+    ];
+
+    const isProtectedRoute = protectedRoutes.some(route => {
+      try {
+        return normalizedPath === route || normalizedPath.startsWith(route + '/');
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Redirect to login if accessing protected route without valid token
+    if (isProtectedRoute && !isValidToken) {
+      try {
+        const loginUrl = new URL('/login', request.url);
+        if (pathname !== '/dashboard') {
+          loginUrl.searchParams.set('redirect', pathname);
+        }
+        return NextResponse.redirect(loginUrl);
+      } catch (urlError) {
+        return NextResponse.redirect('/login');
+      }
+    }
+
+    // Redirect authenticated users away from login page
+    if (isValidToken && (normalizedPath === '/login' || pathname === '/login')) {
+      try {
+        const redirectTo = request.nextUrl?.searchParams?.get('redirect');
+
+        if (redirectTo &&
+            redirectTo.startsWith('/') &&
+            !redirectTo.includes('login') &&
+            !redirectTo.includes('logout')) {
+          const redirectUrl = new URL(redirectTo, request.url);
+          return NextResponse.redirect(redirectUrl);
+        }
+
+        const dashboardUrl = new URL('/dashboard', request.url);
+        return NextResponse.redirect(dashboardUrl);
+
+      } catch (redirectError) {
+        return NextResponse.redirect('/dashboard');
+      }
+    }
+
+    // Set security headers and request metadata
+    const response = NextResponse.next();
+
+    try {
+      response.headers.set('X-Request-ID', requestId);
+      response.headers.set('X-Processing-Time', `${Date.now() - startTime}ms`);
+      response.headers.set('X-Frame-Options', 'DENY');
+      response.headers.set('X-Content-Type-Options', 'nosniff');
+      response.headers.set('X-XSS-Protection', '1; mode=block');
+      response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+      // Add CSP for production security
+      if (process.env.NODE_ENV === 'production') {
+        response.headers.set(
+          'Content-Security-Policy',
+          "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';"
+        );
+      }
+    } catch (headerError) {
+      // Continue without additional headers if there's an error
+    }
+
+    return response;
+
+  } catch (error) {
+    // Fail safely with minimal response
+    const safeResponse = NextResponse.next();
+
+    try {
+      safeResponse.headers.set('X-Middleware-Error', 'true');
+      safeResponse.headers.set('X-Request-ID', requestId);
+    } catch (headerError) {
+      // Ignore header errors in error handling
+    }
+
+    return safeResponse;
+  }
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (images, etc.)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.svg).*)',
+    '/((?!api/.*|_next/static|_next/image|favicon.ico|robots.txt|public/.*|.*\\.[a-zA-Z0-9]+$|__webpack.*|.*hot-update.*).*)',
   ],
-}
+};

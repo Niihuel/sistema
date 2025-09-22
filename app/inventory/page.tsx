@@ -3,17 +3,16 @@
 import { useState, useEffect, useCallback, memo } from "react"
 import { useDebounce } from "use-debounce"
 import { useInventory } from "@/lib/hooks/use-api"
+import { useToast } from "@/lib/hooks/use-toast"
 import Modal from "@/components/modal"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
-import PermissionGuard from "@/components/PermissionGuard"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 type Employee = { id: number; firstName: string; lastName: string }
 
@@ -63,8 +62,7 @@ const CONDITION_OPTIONS = [
 ]
 
 export default function InventoryPage() {
-  const { hasRole, hasPermission, isLoading: authLoading } = useAuth()
-  const { showPermissionError } = usePermissionToast()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const [items, setItems] = useState<InventoryItem[]>([])
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,7 +71,8 @@ export default function InventoryPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; item: InventoryItem | null }>({ isOpen: false, item: null })
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState("")
@@ -151,20 +150,20 @@ export default function InventoryPage() {
     e.preventDefault()
     
     // Check permissions
-    if (!hasPermission('inventory', 'WRITE')) {
-      showPermissionError('No tienes permisos para gestionar el inventario')
+    if (!can('inventory:edit')) {
+      showError('No tienes permisos para gestionar el inventario')
       return
     }
     
     // Validación: si está asignado, debe tener usuario asignado
     if (formData.status === 'ASSIGNED' && !formData.assignedToId) {
-      setNotification({ type: 'error', message: 'Si el estado es "Asignado", debe seleccionar un empleado' })
+      showError('Si el estado es "Asignado", debe seleccionar un empleado')
       return
     }
 
     // Validación: si es propiedad personal, debe estar asignado
     if (formData.isPersonalProperty && !formData.assignedToId) {
-      setNotification({ type: 'error', message: 'Si es propiedad personal, debe estar asignado a un empleado' })
+      showError('Si es propiedad personal, debe estar asignado a un empleado')
       return
     }
 
@@ -192,14 +191,14 @@ export default function InventoryPage() {
         await fetchItems()
         resetForm()
         setIsModalOpen(false)
-        setNotification({ type: 'success', message: editingItem ? 'Item actualizado correctamente' : 'Item creado correctamente' })
+        showSuccess(editingItem ? 'Item actualizado correctamente' : 'Item creado correctamente')
       } else {
         const errorData = await response.json()
-        setNotification({ type: 'error', message: errorData.error || 'Error al guardar el item' })
+        showError(errorData.error || 'Error al guardar el item')
       }
     } catch (error) {
       console.error('Error saving inventory item:', error)
-      setNotification({ type: 'error', message: 'Error al guardar el item' })
+      showError('Error al guardar el item')
     }
   }
 
@@ -226,8 +225,8 @@ export default function InventoryPage() {
     if (!deleteConfirm.item) return
     
     // Check permissions
-    if (!hasPermission('inventory', 'WRITE')) {
-      showPermissionError('No tienes permisos para eliminar items del inventario')
+    if (!can('inventory:delete')) {
+      showError('No tienes permisos para eliminar items del inventario')
       return
     }
     
@@ -280,7 +279,7 @@ export default function InventoryPage() {
 
         if (!deleteResponse.ok) {
           const errorData = await deleteResponse.json()
-          setNotification({ type: 'error', message: `Error eliminando item original: ${errorData.error || 'Error desconocido'}` })
+          showError(`Error eliminando item original: ${errorData.error || 'Error desconocido'}`)
           return
         }
       }
@@ -294,7 +293,7 @@ export default function InventoryPage() {
 
       if (!assignedResponse.ok) {
         const errorData = await assignedResponse.json()
-        setNotification({ type: 'error', message: `Error creando item asignado: ${errorData.error || 'Error desconocido'}` })
+        showError(`Error creando item asignado: ${errorData.error || 'Error desconocido'}`)
         return
       }
 
@@ -307,7 +306,7 @@ export default function InventoryPage() {
 
       if (!unassignedResponse.ok) {
         const errorData = await unassignedResponse.json()
-        setNotification({ type: 'error', message: `Error creando item no asignado: ${errorData.error || 'Error desconocido'}` })
+        showError(`Error creando item no asignado: ${errorData.error || 'Error desconocido'}`)
         return
       }
       
@@ -315,10 +314,10 @@ export default function InventoryPage() {
       resetForm()
       setIsModalOpen(false)
       setDivideConfirm({ open: false, item: null })
-      setNotification({ type: 'success', message: 'Items divididos correctamente: 1 asignado y el resto disponible' })
+      showSuccess('Items divididos correctamente: 1 asignado y el resto disponible')
     } catch (error) {
       console.error('Error dividing items:', error)
-      setNotification({ type: 'error', message: 'Error al dividir los items' })
+      showError('Error al dividir los items')
     }
   }
 
@@ -407,9 +406,9 @@ export default function InventoryPage() {
       })
 
       const result = await exportToProfessionalExcel(exportOptions)
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error al exportar a Excel' })
+      showError('Error al exportar a Excel')
     }
   }
 
@@ -443,9 +442,9 @@ export default function InventoryPage() {
       })
 
       const result = await exportToProfessionalPDF(exportOptions)
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error al exportar a PDF' })
+      showError('Error al exportar a PDF')
     }
   }
 
@@ -479,7 +478,7 @@ export default function InventoryPage() {
   }
 
   // Show access denied if user doesn't have required permissions
-  if (!hasPermission('inventory', 'READ')) {
+  if (!can('inventory:view')) {
     return (
       <AnimatedContainer className="space-y-6 text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -523,28 +522,30 @@ export default function InventoryPage() {
             </div>
           ))}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
-              <Button
-                onClick={handleExportExcel}
-                variant="ghost"
-              >
-                Excel
-              </Button>
-              <Button
-                onClick={handleExportPDF}
-                variant="ghost"
-              >
-                PDF
-              </Button>
-              <Button
-                onClick={() => {
-                  resetForm()
-                  setIsModalOpen(true)
-                }}
-              >
-                Nuevo Item
-              </Button>
-            </PermissionGuard>
+            {can('inventory:edit') && (
+              <>
+                <Button
+                  onClick={handleExportExcel}
+                  variant="ghost"
+                >
+                  Excel
+                </Button>
+                <Button
+                  onClick={handleExportPDF}
+                  variant="ghost"
+                >
+                  PDF
+                </Button>
+                <Button
+                  onClick={() => {
+                    resetForm()
+                    setIsModalOpen(true)
+                  }}
+                >
+                  Nuevo Item
+                </Button>
+              </>
+            )}
           </div>
         </div>
         </div>
@@ -598,10 +599,12 @@ export default function InventoryPage() {
                     </td>
                     <td className="p-3 flex gap-2">
                       <Button onClick={() => setViewItem(item)} variant="ghost" small>Ver</Button>
-                      <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+                      {can('inventory:edit') && (
                         <Button onClick={() => handleEdit(item)} variant="ghost" small>Editar</Button>
+                      )}
+                      {can('inventory:delete') && (
                         <Button onClick={() => setDeleteConfirm({ isOpen: true, item })} small>Eliminar</Button>
-                      </PermissionGuard>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -636,10 +639,12 @@ export default function InventoryPage() {
                 </div>
                 <div className="flex gap-2 mt-3">
                   <Button onClick={() => setViewItem(item)} variant="ghost" small>Ver</Button>
-                  <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+                  {can('inventory:edit') && (
                     <Button onClick={() => handleEdit(item)} variant="ghost" small>Editar</Button>
+                  )}
+                  {can('inventory:delete') && (
                     <Button onClick={() => setDeleteConfirm({ isOpen: true, item })} small>Eliminar</Button>
-                  </PermissionGuard>
+                  )}
                 </div>
               </div>
             ))
@@ -931,13 +936,6 @@ export default function InventoryPage() {
         onCancel={() => setDivideConfirm({ open: false, item: null })}
       />
 
-      {notification && (
-        <CustomNotification
-          type={notification.type}
-          message={notification.message}
-          isVisible={notification !== null}
-          onClose={() => setNotification(null)}
-        />
       )}
     </AnimatedContainer>
   )

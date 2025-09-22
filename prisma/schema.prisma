@@ -14,7 +14,7 @@ datasource db {
 model User {
   id                     Int                @id @default(autoincrement())
   username               String             @unique @db.NVarChar(50)
-  email                  String?            @unique @db.NVarChar(255)
+  email                  String?            @db.NVarChar(255)
   passwordHash           String             @db.NVarChar(255)
   role                   String             @default("USER") @db.NVarChar(20)
   firstName              String?            @db.NVarChar(100)
@@ -27,17 +27,17 @@ model User {
   passwordExpiresAt      DateTime?
   failedLoginAttempts    Int                @default(0)
   lockedUntil            DateTime?
-  sessionToken           String?            @unique @db.NVarChar(500)
+  sessionToken           String?            @db.NVarChar(500)
   sessionExpiresAt       DateTime?
-  passwordResetToken     String?            @unique @db.NVarChar(100)
+  passwordResetToken     String?            @db.NVarChar(100)
   passwordResetExpiresAt DateTime?
-  emailVerificationToken String?            @unique @db.NVarChar(100)
+  emailVerificationToken String?            @db.NVarChar(100)
   createdBy              String?            @db.NVarChar(50)
   updatedBy              String?            @db.NVarChar(50)
   deletedAt              DateTime?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
-  employeeId             Int?               @unique
+  employeeId             Int?
   employee               Employee?          @relation(fields: [employeeId], references: [id])
   userRoles              UserRole[]
   userPermissions        UserPermission[]
@@ -69,7 +69,7 @@ model Employee {
   status            String            @default("ACTIVE") @db.NVarChar(20)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
-  user              User?
+  users             User[]
   calipsoAccounts   CalipsoAccount[]
   emailAccounts     EmailAccount[]
   equipmentAssigned Equipment[]       @relation("AssignedEquipment")

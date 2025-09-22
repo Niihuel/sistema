@@ -1,16 +1,42 @@
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@prisma/client";
 
 declare global {
-  var prismaGlobal: PrismaClient | undefined
+  var prismaGlobal: PrismaClient | undefined;
 }
 
 let prismaInstance: PrismaClient | null = null;
 let connectionError: string | null = null;
+let isConnecting = false;
 
-// Función para obtener la instancia de Prisma de forma lazy
+const prismaConfig = {
+  log: process.env.NODE_ENV === 'development'
+    ? ['error', 'warn']
+    : ['error'],
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+} as const;
+
 export async function getPrisma(): Promise<PrismaClient> {
   if (prismaInstance) {
-    return prismaInstance;
+    try {
+      await prismaInstance.$queryRaw`SELECT 1 as test`;
+      return prismaInstance;
+    } catch (error) {
+      prismaInstance = null;
+      connectionError = null;
+    }
+  }
+
+  if (isConnecting) {
+    let attempts = 0;
+    while (isConnecting && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    if (prismaInstance) return prismaInstance;
   }
 
   if (connectionError) {
@@ -18,65 +44,208 @@ export async function getPrisma(): Promise<PrismaClient> {
   }
 
   try {
-    prismaInstance = global.prismaGlobal ?? new PrismaClient({
-      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    isConnecting = true;
+
+    prismaInstance = global.prismaGlobal ?? new PrismaClient(prismaConfig);
+
+    prismaInstance.$on('error', (e) => {
+      console.error('Database error:', e);
     });
 
-    // Probar la conexión
-    await prismaInstance.$connect();
+    const connectionTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+    );
+
+    await Promise.race([
+      prismaInstance.$connect(),
+      connectionTimeout
+    ]);
+
+    await prismaInstance.$queryRaw`SELECT 1 as test`;
     
     if (process.env.NODE_ENV !== "production") {
       global.prismaGlobal = prismaInstance;
     }
 
-    console.log('✅ Database connection established successfully');
+    isConnecting = false;
     return prismaInstance;
+
   } catch (error) {
+    isConnecting = false;
     connectionError = error instanceof Error ? error.message : 'Unknown database error';
-    console.error('❌ Database connection failed:', connectionError);
-    throw error;
+    
+    if (prismaInstance) {
+      try {
+        await prismaInstance.$disconnect();
+      } catch (disconnectError) {
+        // Ignore disconnect errors
+      }
+      prismaInstance = null;
+    }
+    
+    throw new Error(`Database connection failed: ${connectionError}`);
   }
 }
 
-// Función para verificar si la base de datos está disponible
 export async function isDatabaseAvailable(): Promise<boolean> {
+  let testClient: PrismaClient | null = null;
+  
   try {
-    const prisma = await getPrisma();
-    await prisma.$queryRaw`SELECT 1`;
+    testClient = new PrismaClient({
+      log: [],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
+    });
+
+    const testTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Database test timeout')), 8000)
+    );
+
+    await Promise.race([
+      testClient.$connect(),
+      testTimeout
+    ]);
+
+    await Promise.race([
+      testClient.$queryRaw`SELECT 1 as test`,
+      testTimeout
+    ]);
+
     return true;
+
   } catch (error) {
-    console.warn('Database not available:', error instanceof Error ? error.message : error);
     return false;
+  } finally {
+    if (testClient) {
+      try {
+        await testClient.$disconnect();
+      } catch (disconnectError) {
+        // Ignore
+      }
+    }
   }
 }
 
-// Función para usar Prisma con manejo de errores
 export async function withDatabase<T>(
   operation: (prisma: PrismaClient) => Promise<T>,
-  fallback?: () => Promise<T>
+  fallback?: () => Promise<T>,
+  options?: {
+    retries?: number;
+    retryDelay?: number;
+    timeoutMs?: number;
+  }
 ): Promise<T> {
-  try {
-    const prisma = await getPrisma();
-    return await operation(prisma);
-  } catch (error) {
-    console.error('Database operation failed:', error);
-    if (fallback) {
-      console.log('Using fallback operation...');
-      return await fallback();
+  const {
+    retries = 2,
+    retryDelay = 1000,
+    timeoutMs = 30000
+  } = options || {};
+
+  if (!operation || typeof operation !== 'function') {
+    throw new Error('Operation must be a function');
+  }
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    try {
+      const prisma = await getPrisma();
+      
+      const operationTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Database operation timeout')), timeoutMs)
+      );
+
+      const result = await Promise.race([
+        operation(prisma),
+        operationTimeout
+      ]);
+
+      return result;
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      if (attempt > retries) {
+        break;
+      }
+
+      if (prismaInstance) {
+        try {
+          await prismaInstance.$disconnect();
+        } catch (disconnectError) {
+          // Ignore
+        }
+        prismaInstance = null;
+        connectionError = null;
+      }
+
+      if (retryDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
     }
-    throw error;
+  }
+
+  if (fallback) {
+    try {
+      return await fallback();
+    } catch (fallbackError) {
+      throw lastError || new Error('Database operation and fallback both failed');
+    }
+  }
+
+  throw lastError || new Error('Database operation failed');
+}
+
+export async function disconnectPrisma(): Promise<void> {
+  if (prismaInstance) {
+    try {
+      await prismaInstance.$disconnect();
+    } catch (error) {
+      // Ignore
+    } finally {
+      prismaInstance = null;
+      connectionError = null;
+      
+      if (process.env.NODE_ENV !== "production") {
+        global.prismaGlobal = undefined;
+      }
+    }
   }
 }
 
-// Mantener compatibilidad con código existente (pero deprecado)
 export const prisma = new Proxy({} as PrismaClient, {
-  get(target, prop) {
-    console.warn('Direct prisma usage is deprecated. Use getPrisma() or withDatabase() instead.');
-    if (prismaInstance) {
-      return prismaInstance[prop as keyof PrismaClient];
+  get(target, prop, receiver) {
+    if (prop === 'then' || prop === 'catch' || prop === 'finally') {
+      return undefined;
     }
-    throw new Error('Database not initialized. Use getPrisma() first.');
+    
+    if (!prismaInstance) {
+      throw new Error(
+        'Database not initialized. Use getPrisma() or withDatabase() instead.'
+      );
+    }
+    
+    const value = (prismaInstance as any)[prop];
+    
+    if (typeof value === 'function') {
+      return function(this: any, ...args: any[]) {
+        try {
+          return value.apply(prismaInstance, args);
+        } catch (error) {
+          throw error;
+        }
+      };
+    }
+    
+    return value;
   }
 });
 
-
+if (typeof process !== 'undefined') {
+  process.on('SIGTERM', disconnectPrisma);
+  process.on('SIGINT', disconnectPrisma);
+  process.on('beforeExit', disconnectPrisma);
+}

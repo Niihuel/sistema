@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Modal from "./modal"
 import Button from "./button"
-import CustomNotification from "./notification"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface DatabaseConfig {
   host: string
@@ -32,7 +32,7 @@ export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Confi
   })
   
   const [isTesting, setIsTesting] = useState(false)
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  const { showSuccess, showError } = useToast()
 
   async function testConnection() {
     setIsTesting(true)
@@ -47,12 +47,12 @@ export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Confi
       const result = await response.json()
       
       if (response.ok && result.success) {
-        setNotification({ type: 'success', message: 'Conexión exitosa a la base de datos' })
+        showSuccess('Conexión exitosa a la base de datos')
       } else {
-        setNotification({ type: 'error', message: result.error || 'Error al conectar con la base de datos' })
+        showError(result.error || 'Error al conectar con la base de datos')
       }
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error de red al probar conexión' })
+      showError('Error de red al probar conexión')
     } finally {
       setIsTesting(false)
     }
@@ -60,15 +60,15 @@ export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Confi
 
   function handleSave() {
     if (!config.host || !config.database || !config.username) {
-      setNotification({ type: 'error', message: 'Por favor completa los campos obligatorios' })
+      showError('Por favor completa los campos obligatorios')
       return
     }
-    
+
     if (onSave) {
       onSave(config)
     }
-    
-    setNotification({ type: 'success', message: 'Configuración guardada correctamente' })
+
+    showSuccess('Configuración guardada correctamente')
     setTimeout(() => {
       onClose()
     }, 1500)
@@ -201,13 +201,6 @@ export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Confi
           </div>
         </div>
       </Modal>
-
-      <CustomNotification
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-        onClose={() => setNotification(null)}
-      />
     </>
   )
 }

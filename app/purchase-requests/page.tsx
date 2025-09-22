@@ -7,10 +7,9 @@ import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface Employee {
   id: number
@@ -67,7 +66,7 @@ const STATUS_OPTIONS = [
 ]
 
 export default function PurchaseRequestsPage() {
-  const { user, hasRole, hasPermission, isLoading: authLoading } = useAuth()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const { showPermissionError } = usePermissionToast()
   const [requests, setRequests] = useState<PurchaseRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PurchaseRequest[]>([])
@@ -82,7 +81,8 @@ export default function PurchaseRequestsPage() {
   const [statusFilter, setStatusFilter] = useState("")
   const [priorityFilter, setPriorityFilter] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
 
   const [formData, setFormData] = useState({
     requestorId: "",
@@ -158,7 +158,7 @@ export default function PurchaseRequestsPage() {
     e.preventDefault()
 
     // Check permissions
-    if (!hasPermission('PURCHASE_REQUESTS', 'create') && !hasPermission('PURCHASE_REQUESTS', 'update')) {
+    if (!can('purchase-requests:create') && !can('purchase-requests:edit')) {
       showPermissionError('No tienes permisos para gestionar solicitudes de compra')
       return
     }
@@ -209,7 +209,7 @@ export default function PurchaseRequestsPage() {
   }
 
   const handleEdit = (request: PurchaseRequest) => {
-    if (!hasPermission('PURCHASE_REQUESTS', 'update')) {
+    if (!can('purchase-requests:edit')) {
       showPermissionError('No tienes permisos para editar solicitudes de compra')
       return
     }
@@ -239,7 +239,7 @@ export default function PurchaseRequestsPage() {
     if (!deleteConfirm.request) return
 
     // Check permissions
-    if (!hasPermission('PURCHASE_REQUESTS', 'delete')) {
+    if (!can('purchase-requests:delete')) {
       showPermissionError('No tienes permisos para eliminar solicitudes de compra')
       setDeleteConfirm({ isOpen: false, request: null })
       return
@@ -462,7 +462,7 @@ export default function PurchaseRequestsPage() {
   }
 
   // Check if user has permission to access purchase requests
-  if (!hasPermission('PURCHASE_REQUESTS', 'read') && !hasRole(['ADMIN', 'MANAGER', 'SUPPORT'])) {
+  if (!can('purchase-requests:view')) {
     return (
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -506,10 +506,10 @@ export default function PurchaseRequestsPage() {
             <Select value={categoryFilter} onChange={setCategoryFilter} options={[{ value: "", label: "Todas las categorías" }, ...CATEGORIES as any]} />
           </div>
           <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
-            {hasPermission('PURCHASE_REQUESTS', 'create') && (
+            {can('purchase-requests:create') && (
               <Button onClick={() => { resetForm(); setIsModalOpen(true) }}>Nueva Solicitud</Button>
             )}
-            {hasPermission('PURCHASE_REQUESTS', 'export') && (
+            {can('purchase-requests:export') && (
               <>
                 <Button variant="ghost" onClick={handleExportExcel}>Exportar Excel</Button>
                 <Button variant="ghost" onClick={handleExportPDF}>Exportar PDF</Button>
@@ -592,10 +592,10 @@ export default function PurchaseRequestsPage() {
                     </td>
                     <td className="p-3">
                       <div className="flex gap-2">
-                        {hasPermission('PURCHASE_REQUESTS', 'update') && (
+                        {can('purchase-requests:edit') && (
                           <Button onClick={() => handleEdit(request)} variant="ghost" small>Editar</Button>
                         )}
-                        {hasPermission('PURCHASE_REQUESTS', 'delete') && (
+                        {can('purchase-requests:delete') && (
                           <Button onClick={() => setDeleteConfirm({ isOpen: true, request })} small>Eliminar</Button>
                         )}
                       </div>
@@ -957,11 +957,9 @@ export default function PurchaseRequestsPage() {
         cancelText="Cancelar"
       />
 
-      <CustomNotification
         type={notification?.type || 'info'}
         message={notification?.message || ''}
         isVisible={!!notification}
-        onClose={() => setNotification(null)}
       />
       </div>
     </AnimatedContainer>

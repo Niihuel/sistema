@@ -3,19 +3,19 @@
 import { useState } from "react"
 import Image from "next/image"
 import { Eye, EyeOff, Settings } from "lucide-react"
-import DatabaseConfig from "@/components/db-config"
+// import DatabaseConfig from "@/components/db-config" // Componente no existe
+import { useToast } from "@/lib/hooks/use-toast"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showDbConfig, setShowDbConfig] = useState(false)
+  const { showError } = useToast()
   const [showPassword, setShowPassword] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
     setLoading(true)
     try {
       const res = await fetch("/api/auth/login", {
@@ -38,7 +38,7 @@ export default function LoginPage() {
       window.location.href = "/dashboard"
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error inesperado"
-      setError(msg)
+      showError(msg)
     } finally {
       setLoading(false)
     }
@@ -104,9 +104,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {error && (
-            <div className="text-red-300 text-xs bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2">{error}</div>
-          )}
 
           <button
             type="submit"
@@ -125,13 +122,13 @@ export default function LoginPage() {
         </form>
       </div>
 
-      <DatabaseConfig
+      {/* <DatabaseConfig
         isOpen={showDbConfig}
         onClose={() => setShowDbConfig(false)}
         onSave={() => {
           // Configuración guardada
         }}
-      />
+      /> */}
     </div>
   )
 }

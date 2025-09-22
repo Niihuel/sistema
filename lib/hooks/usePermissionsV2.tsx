@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react'
-import { useAuth } from './useAuth'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 interface Role {
   id: number
@@ -58,6 +58,7 @@ interface PermissionsContextValue extends PermissionsState {
   hasPermission: (resource: string, action: string) => boolean
   hasAnyPermission: (...permissions: string[]) => boolean
   hasAllPermissions: (...permissions: string[]) => boolean
+  can: (permission: string) => boolean
 
   // Role checking functions
   hasRole: (roleName: string) => boolean
@@ -192,6 +193,12 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     return permissions.every(perm => state.permissions.has(perm))
   }, [state.permissions])
 
+  // Simple permission checker - used by components
+  const can = useCallback((permission: string): boolean => {
+    if (state.permissions.has('*:*')) return true
+    return state.permissions.has(permission)
+  }, [state.permissions])
+
   // Role checking functions
   const hasRole = useCallback((roleName: string): boolean => {
     return state.roles.some(role => role.name === roleName)
@@ -259,6 +266,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    can,
     hasRole,
     hasAnyRole,
     getHighestRole,

@@ -24,6 +24,22 @@ interface UserProfile {
   twoFactorEnabled: boolean
   lastLoginAt?: Date
   passwordExpiresAt?: Date
+  // Sistema Discord mejorado
+  discordRoles?: Array<{
+    id: string
+    name: string
+    displayName: string
+    description?: string
+    color?: string
+    icon?: string
+    level: number
+    isActive: boolean
+    isPrimary: boolean
+    isTemporary: boolean
+    expiresAt?: Date
+    assignedAt: Date
+    conditions?: any
+  }>
   roles: Array<{
     id: number
     name: string
@@ -155,7 +171,7 @@ export async function GET(req: NextRequest) {
 
     console.log(`[/api/auth/me] ${requestId}: Building user profile`)
 
-    // Build simplified user profile for production
+    // Build production-ready user profile with Discord system support
     const userProfile: UserProfile = {
       id: user.id,
       username: user.username,
@@ -163,89 +179,34 @@ export async function GET(req: NextRequest) {
       isActive: true,
       isEmailVerified: true,
       twoFactorEnabled: false,
+      // Legacy roles for backward compatibility
       roles: [{
         id: 1,
         name: user.role,
-        displayName: user.role === 'ADMIN' ? 'Administrador' : 'Usuario',
-        level: user.role === 'ADMIN' ? 90 : 50,
+        displayName: getRoleDisplayName(user.role),
+        level: getRoleLevel(user.role),
         isActive: true,
         isPrimary: true,
         isTemporary: false,
-        assignedAt: user.createdAt
+        assignedAt: user.createdAt,
+        color: getRoleColor(user.role),
+        icon: getRoleIcon(user.role)
       }],
-      permissions: user.role === 'ADMIN' ? [
-        {
-          resource: 'DASHBOARD',
-          actions: ['read'],
-          scope: 'ALL',
-          riskLevel: 'LOW',
-          requiresMFA: false
-        },
-        {
-          resource: 'USERS',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL', 
-          riskLevel: 'HIGH',
-          requiresMFA: false
-        },
-        {
-          resource: 'EMPLOYEES',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL',
-          riskLevel: 'MEDIUM',
-          requiresMFA: false
-        },
-        {
-          resource: 'EQUIPMENT',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL',
-          riskLevel: 'MEDIUM',
-          requiresMFA: false
-        },
-        {
-          resource: 'INVENTORY',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL',
-          riskLevel: 'MEDIUM',
-          requiresMFA: false
-        },
-        {
-          resource: 'TICKETS',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL',
-          riskLevel: 'LOW',
-          requiresMFA: false
-        },
-        {
-          resource: 'PRINTERS',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL',
-          riskLevel: 'MEDIUM',
-          requiresMFA: false
-        },
-        {
-          resource: 'BACKUPS',
-          actions: ['read', 'create', 'update'],
-          scope: 'ALL',
-          riskLevel: 'MEDIUM',
-          requiresMFA: false
-        },
-        {
-          resource: 'PURCHASE_REQUESTS',
-          actions: ['read', 'create', 'update', 'delete'],
-          scope: 'ALL',
-          riskLevel: 'MEDIUM',
-          requiresMFA: false
-        }
-      ] : [
-        {
-          resource: 'DASHBOARD',
-          actions: ['read'],
-          scope: 'ALL',
-          riskLevel: 'LOW',
-          requiresMFA: false
-        }
-      ],
+      // Discord-style roles (future expansion)
+      discordRoles: [{
+        id: `discord-${user.role}`,
+        name: user.role,
+        displayName: getRoleDisplayName(user.role),
+        level: getRoleLevel(user.role),
+        isActive: true,
+        isPrimary: true,
+        isTemporary: false,
+        assignedAt: user.createdAt,
+        color: getRoleColor(user.role),
+        icon: getRoleIcon(user.role)
+      }],
+      // Simplified permissions based on role
+      permissions: getPermissionsForRole(user.role),
       deniedPermissions: [],
       settings: {
         timezone: 'America/Mexico_City',
@@ -287,4 +248,181 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Helper functions for role management
+function getRoleDisplayName(role: string): string {
+  const roleNames: Record<string, string> = {
+    'SUPER_ADMIN': 'Super Administrador',
+    'ADMIN': 'Administrador',
+    'MANAGER': 'Gerente',
+    'TECHNICIAN': 'Técnico',
+    'SUPPORT': 'Soporte',
+    'EMPLOYEE': 'Empleado',
+    'USER': 'Usuario',
+    'GUEST': 'Invitado'
+  }
+  return roleNames[role] || role
+}
+
+function getRoleLevel(role: string): number {
+  const roleLevels: Record<string, number> = {
+    'SUPER_ADMIN': 100,
+    'ADMIN': 90,
+    'MANAGER': 70,
+    'TECHNICIAN': 50,
+    'SUPPORT': 40,
+    'EMPLOYEE': 30,
+    'USER': 20,
+    'GUEST': 10
+  }
+  return roleLevels[role] || 0
+}
+
+function getRoleColor(role: string): string {
+  const roleColors: Record<string, string> = {
+    'SUPER_ADMIN': '#E74C3C',
+    'ADMIN': '#E67E22',
+    'MANAGER': '#3498DB',
+    'TECHNICIAN': '#9B59B6',
+    'SUPPORT': '#1ABC9C',
+    'EMPLOYEE': '#2ECC71',
+    'USER': '#95A5A6',
+    'GUEST': '#BDC3C7'
+  }
+  return roleColors[role] || '#95A5A6'
+}
+
+function getRoleIcon(role: string): string {
+  const roleIcons: Record<string, string> = {
+    'SUPER_ADMIN': '👑',
+    'ADMIN': '🛡️',
+    'MANAGER': '👔',
+    'TECHNICIAN': '🔧',
+    'SUPPORT': '🎧',
+    'EMPLOYEE': '💼',
+    'USER': '👤',
+    'GUEST': '👁️'
+  }
+  return roleIcons[role] || '👤'
+}
+
+function getPermissionsForRole(role: string): PermissionScope[] {
+  const basePermissions: PermissionScope[] = [
+    {
+      resource: 'dashboard',
+      actions: ['view'],
+      scope: 'ALL',
+      riskLevel: 'LOW',
+      requiresMFA: false
+    }
+  ]
+
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+    return [
+      ...basePermissions,
+      {
+        resource: 'users',
+        actions: ['view', 'create', 'edit', 'delete'],
+        scope: 'ALL',
+        riskLevel: 'HIGH',
+        requiresMFA: false
+      },
+      {
+        resource: 'employees',
+        actions: ['view', 'create', 'edit', 'delete'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      },
+      {
+        resource: 'equipment',
+        actions: ['view', 'create', 'edit', 'delete'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      },
+      {
+        resource: 'inventory',
+        actions: ['view', 'create', 'edit', 'delete'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      },
+      {
+        resource: 'tickets',
+        actions: ['view_all', 'create', 'edit_all', 'assign', 'close'],
+        scope: 'ALL',
+        riskLevel: 'LOW',
+        requiresMFA: false
+      },
+      {
+        resource: 'printers',
+        actions: ['view', 'create', 'edit', 'delete'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      },
+      {
+        resource: 'purchases',
+        actions: ['view', 'create', 'approve', 'process'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      },
+      {
+        resource: 'backups',
+        actions: ['view', 'create'],
+        scope: 'ALL',
+        riskLevel: 'HIGH',
+        requiresMFA: false
+      }
+    ]
+  }
+
+  if (role === 'TECHNICIAN') {
+    return [
+      ...basePermissions,
+      {
+        resource: 'equipment',
+        actions: ['view', 'edit'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      },
+      {
+        resource: 'tickets',
+        actions: ['view_all', 'edit_all', 'assign', 'close'],
+        scope: 'ALL',
+        riskLevel: 'LOW',
+        requiresMFA: false
+      },
+      {
+        resource: 'inventory',
+        actions: ['view', 'edit', 'assign'],
+        scope: 'ALL',
+        riskLevel: 'MEDIUM',
+        requiresMFA: false
+      }
+    ]
+  }
+
+  // Default permissions for USER/EMPLOYEE roles
+  return [
+    ...basePermissions,
+    {
+      resource: 'tickets',
+      actions: ['view_own', 'create', 'edit_own'],
+      scope: 'OWN',
+      riskLevel: 'LOW',
+      requiresMFA: false
+    },
+    {
+      resource: 'equipment',
+      actions: ['view'],
+      scope: 'ALL',
+      riskLevel: 'LOW',
+      requiresMFA: false
+    }
+  ]
 }

@@ -7,12 +7,10 @@ import Modal from "@/components/modal"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
-import PermissionGuard from "@/components/PermissionGuard"
 import { validateForm, ValidationRule } from "@/lib/validation"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface Employee {
   id: number
@@ -87,8 +85,8 @@ interface EmailAccount {
 }
 
 export default function UsersPage() {
-  const { hasRole, hasPermission, isLoading: authLoading } = useAuth()
-  const { showPermissionError } = usePermissionToast()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
+  const { showSuccess, showError, showWarning } = useToast()
   const [activeTab, setActiveTab] = useState('windows')
   const [windowsAccounts, setWindowsAccounts] = useState<WindowsAccount[]>([])
   const [qnapAccounts, setQnapAccounts] = useState<QnapAccount[]>([])
@@ -110,7 +108,6 @@ export default function UsersPage() {
 
   // Form data
   const [formData, setFormData] = useState<Record<string, string | number | boolean>>({})
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [showPassword, setShowPassword] = useState(false)
   const [showViewPassword, setShowViewPassword] = useState(false)
@@ -198,8 +195,8 @@ export default function UsersPage() {
     e.preventDefault()
     
     // Check permissions
-    if (!hasRole(['ADMIN'])) {
-      showPermissionError('No tienes permisos para gestionar cuentas de usuario')
+    if (!can('users:edit')) {
+      showError('No tienes permisos para gestionar cuentas de usuario')
       return
     }
     
@@ -208,7 +205,7 @@ export default function UsersPage() {
     const validation = validateForm(formData, getValidationRules())
     if (!validation.isValid) {
       setFormErrors(validation.errors)
-      setNotification({ type: 'error', message: validation.firstError || 'Por favor corrige los errores en el formulario' })
+      showError(validation.firstError || 'Por favor corrige los errores en el formulario')
       return
     }
     
@@ -232,10 +229,10 @@ export default function UsersPage() {
         await fetchData()
         resetForm()
         setIsModalOpen(false)
-        setNotification({ type: 'success', message: editingAccount ? 'Cuenta actualizada correctamente' : 'Cuenta creada correctamente' })
+        showSuccess(editingAccount ? 'Cuenta actualizada correctamente' : 'Cuenta creada correctamente')
       } else {
         const errorData = await response.json()
-        setNotification({ type: 'error', message: errorData.error || 'Error al guardar la cuenta' })
+        showError(errorData.error || 'Error al guardar la cuenta')
       }
     } catch (error) {
       console.error('Error saving account:', error)
@@ -309,8 +306,8 @@ export default function UsersPage() {
     if (!deleteConfirm.account) return
     
     // Check permissions
-    if (!hasRole(['ADMIN'])) {
-      showPermissionError('No tienes permisos para eliminar cuentas de usuario')
+    if (!can('users:edit')) {
+      showError('No tienes permisos para eliminar cuentas de usuario')
       return
     }
     
@@ -324,14 +321,14 @@ export default function UsersPage() {
       if (response.ok) {
         await fetchData()
         setDeleteConfirm({ isOpen: false, account: null })
-        setNotification({ type: 'success', message: 'Eliminado correctamente' })
+        showSuccess('Eliminado correctamente')
       } else {
         const errorData = await response.json()
-        setNotification({ type: 'error', message: errorData.error || 'Error al eliminar' })
+        showError(errorData.error || 'Error al eliminar')
       }
     } catch (error) {
       console.error('Error deleting:', error)
-      setNotification({ type: 'error', message: 'Error al eliminar' })
+      showError('Error al eliminar')
     }
   }
 
@@ -515,9 +512,9 @@ export default function UsersPage() {
         ? await exportToProfessionalExcel(exportOptions)
         : await exportToProfessionalPDF(exportOptions)
         
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: `Error al exportar ${format.toUpperCase()}` })
+      showError(`Error al exportar ${format.toUpperCase()}`)
     }
   }
 
@@ -582,9 +579,9 @@ export default function UsersPage() {
         ? await exportToProfessionalExcel(exportOptions)
         : await exportToProfessionalPDF(exportOptions)
         
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: `Error al exportar reporte completo ${format.toUpperCase()}` })
+      showError(`Error al exportar reporte completo ${format.toUpperCase()}`)
     }
   }
 
@@ -604,7 +601,7 @@ export default function UsersPage() {
   }
 
   // Show access denied if user doesn't have required permissions
-  if (!hasPermission('users', 'READ')) {
+  if (!can('users:view')) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -1355,11 +1352,9 @@ export default function UsersPage() {
         cancelText="Cancelar"
       />
 
-      <CustomNotification
         type={notification?.type || 'info'}
         message={notification?.message || ''}
         isVisible={!!notification}
-        onClose={() => setNotification(null)}
       />
     </AnimatedContainer>
   )

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -23,7 +23,7 @@ export default function AuthGuard({
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="relative">
@@ -104,7 +104,7 @@ function AuthGuardInner({
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <div className="relative">
@@ -130,7 +130,7 @@ function AuthGuardInner({
   // Show error state if there's a critical error
   if (error && error.code === 'INTERNAL_ERROR') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="max-w-md mx-auto p-8 bg-gray-900/50 backdrop-blur-sm rounded-lg border border-red-500/20">
           <div className="text-center space-y-4">
             <div className="text-red-500">

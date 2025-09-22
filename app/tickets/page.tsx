@@ -8,13 +8,11 @@ import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import MobileTable from "@/components/mobile-table"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
 import { validateForm, ValidationRule } from "@/lib/validation"
 import { AREA_OPTIONS } from "@/lib/constants/areas"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
-import PermissionGuard from "@/components/PermissionGuard"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 type Ticket = {
   id: number
@@ -60,7 +58,7 @@ const getPriorityColor = (priority: string) => {
 }
 
 export default function TicketsPage() {
-  const { user, hasRole, hasPermission, isLoading: authLoading } = useAuth()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const { showPermissionError } = usePermissionToast()
   const [items, setItems] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(false)
@@ -74,7 +72,8 @@ export default function TicketsPage() {
   const [form, setForm] = useState<Partial<Ticket>>({ status: "Abierto", priority: "Media" })
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   
   // Status change modal states
@@ -101,7 +100,7 @@ export default function TicketsPage() {
   }
 
   // Check if user has permission to access tickets
-  if (!hasPermission('TICKETS', 'read') && !hasRole(['ADMIN', 'TECHNICIAN', 'MANAGER', 'SUPPORT'])) {
+  if (!can('tickets:view')) {
     return (
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -157,7 +156,7 @@ export default function TicketsPage() {
   }, [])
 
   function openCreate() {
-    if (!hasPermission('TICKETS', 'create')) {
+    if (!can('tickets:create')) {
       showPermissionError('No tienes permisos para crear solicitudes')
       return
     }
@@ -167,7 +166,7 @@ export default function TicketsPage() {
   }
 
   function openEdit(ticket: Ticket) {
-    if (!hasPermission('TICKETS', 'update')) {
+    if (!can('tickets:edit')) {
       showPermissionError('No tienes permisos para editar solicitudes')
       return
     }
@@ -177,7 +176,7 @@ export default function TicketsPage() {
   }
 
   function openStatusChange(ticket: Ticket) {
-    if (!hasPermission('TICKETS', 'update')) {
+    if (!can('tickets:edit')) {
       showPermissionError('No tienes permisos para cambiar el estado de solicitudes')
       return
     }
@@ -218,7 +217,7 @@ export default function TicketsPage() {
       await load()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -348,7 +347,7 @@ export default function TicketsPage() {
     const validation = validateForm(form, validationRules)
     if (!validation.isValid) {
       setFormErrors(validation.errors)
-      setNotification({ type: 'error', message: validation.firstError || 'Por favor corrige los errores en el formulario' })
+      showError(validation.firstError || 'Por favor corrige los errores en el formulario')
       return
     }
     
@@ -378,7 +377,7 @@ export default function TicketsPage() {
       setForm({ status: "Abierto", priority: "Media" })
       setFormErrors({})
       setIsFormOpen(false)
-      setNotification({ type: 'success', message: editing ? 'Solicitud actualizada correctamente' : 'Solicitud creada correctamente' })
+      showSuccess(editing ? 'Solicitud actualizada correctamente' : 'Solicitud creada correctamente')
       await load()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
@@ -403,7 +402,7 @@ export default function TicketsPage() {
         const ticket = item as Ticket
         return (
           <div className="flex gap-2 justify-end">
-            {(ticket.status === "Abierto" || ticket.status === "En Progreso") && hasPermission('TICKETS', 'update') && (
+            {(ticket.status === "Abierto" || ticket.status === "En Progreso") && can('tickets:edit') && (
               <Button
                 onClick={() => openStatusChange(ticket)}
                 variant="ghost"
@@ -413,10 +412,10 @@ export default function TicketsPage() {
                 Cambiar Estado
               </Button>
             )}
-            {hasPermission('TICKETS', 'update') && (
+            {can('tickets:edit') && (
               <Button onClick={() => openEdit(ticket)} variant="ghost" small>Editar</Button>
             )}
-            {hasPermission('TICKETS', 'delete') && (
+            {can('tickets:delete') && (
               <Button onClick={() => setDeleteId(ticket.id)} small>Eliminar</Button>
             )}
           </div>
@@ -453,10 +452,10 @@ export default function TicketsPage() {
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button onClick={() => load()} className="text-sm">Filtrar</Button>
-              {hasPermission('TICKETS', 'create') && (
+              {can('tickets:create') && (
                 <Button onClick={() => openCreate()} variant="ghost" className="text-sm">Nueva Solicitud</Button>
               )}
-              {hasPermission('TICKETS', 'export') && (
+              {can('tickets:export') && (
                 <>
                   <Button onClick={handleExportExcel} variant="ghost" className="text-sm">Excel</Button>
                   <Button onClick={handleExportPDF} variant="ghost" className="text-sm">PDF</Button>
@@ -508,7 +507,7 @@ export default function TicketsPage() {
                     <td className="p-2 sm:p-3">{t.technicianId ? (systemTechnicians.find(tech => tech.id === t.technicianId) ? `${systemTechnicians.find(tech => tech.id === t.technicianId)?.firstName} ${systemTechnicians.find(tech => tech.id === t.technicianId)?.lastName}` : t.technicianId) : "-"}</td>
                     <td className="p-2 sm:p-3">
                       <div className="flex gap-1 sm:gap-2">
-                        {(t.status === "Abierto" || t.status === "En Progreso") && hasPermission('TICKETS', 'update') && (
+                        {(t.status === "Abierto" || t.status === "En Progreso") && can('tickets:edit') && (
                           <Button
                             onClick={() => openStatusChange(t)}
                             variant="ghost"
@@ -518,10 +517,10 @@ export default function TicketsPage() {
                             Cambiar Estado
                           </Button>
                         )}
-                        {hasPermission('TICKETS', 'update') && (
+                        {can('tickets:edit') && (
                           <Button onClick={() => openEdit(t)} variant="ghost" small className="text-xs">Editar</Button>
                         )}
-                        {hasPermission('TICKETS', 'delete') && (
+                        {can('tickets:delete') && (
                           <Button onClick={() => setDeleteId(t.id)} small className="text-xs">Eliminar</Button>
                         )}
                       </div>
@@ -776,11 +775,9 @@ export default function TicketsPage() {
         </div>
       </Modal>
 
-      <CustomNotification
         type={notification?.type || 'info'}
         message={notification?.message || ''}
         isVisible={!!notification}
-        onClose={() => setNotification(null)}
       />
 
       <ConfirmDialog
@@ -790,7 +787,7 @@ export default function TicketsPage() {
         onCancel={() => setDeleteId(null)}
         onConfirm={async () => {
           if (deleteId != null) {
-            if (!hasPermission('TICKETS', 'delete')) {
+            if (!can('tickets:delete')) {
               showPermissionError('No tienes permisos para eliminar solicitudes')
               setDeleteId(null)
               return

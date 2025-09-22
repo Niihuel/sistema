@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Button from '@/components/button'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 export default function NotFound() {
   const router = useRouter()

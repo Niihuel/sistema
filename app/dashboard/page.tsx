@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
-import { useAuth } from "@/lib/hooks/useAuth"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 const getStatusColorForChart = (statusName: string) => {
   // Mapear diferentes tipos de estados a colores consistentes
@@ -54,7 +55,7 @@ const normalizeStatusText = (statusName: string) => {
 }
 
 export default function DashboardPage() {
-  const { user, isLoading: authLoading, hasPermission, hasRole } = useAuth()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const [data, setData] = useState<{
     openTickets: number
     totalEquipment: number
@@ -67,7 +68,7 @@ export default function DashboardPage() {
     inventoryByCategory?: { name: string; value: number }[]
     backupsByStatus?: { name: string; value: number }[]
   } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { showError } = useToast()
 
   useEffect(() => {
     async function load() {
@@ -79,7 +80,7 @@ export default function DashboardPage() {
         setData(await res.json() as typeof data)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Error inesperado"
-        setError(msg)
+        showError(msg)
       }
     }
     if (!authLoading) {
@@ -101,7 +102,7 @@ export default function DashboardPage() {
   }
 
   // Check if user has permission to access dashboard
-  if (!hasPermission('DASHBOARD', 'read') && !hasRole(['ADMIN', 'TECHNICIAN', 'MANAGER', 'SUPPORT'])) {
+  if (!can('dashboard:view')) {
     return (
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -123,7 +124,6 @@ export default function DashboardPage() {
         </div>
       </FadeInUp>
       
-      {error && <FadeInUp delay={0.2}><p className="text-red-400 mb-4">{error}</p></FadeInUp>}
       
       {!data ? (
         <FadeInUp delay={0.3}><p className="text-white/70">Cargando...</p></FadeInUp>

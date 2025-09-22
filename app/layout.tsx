@@ -4,6 +4,9 @@ import { Figtree } from "next/font/google"
 import { GeistMono } from "geist/font/mono"
 import { Instrument_Serif } from "next/font/google"
 import "./globals.css"
+import { AuthProvider } from "@/components/providers/AuthProvider"
+import { ToastProvider } from "@/lib/hooks/use-toast"
+import { PermissionsProvider } from "@/lib/hooks/usePermissionsV2"
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -105,8 +108,13 @@ html {
         `}</style>
       </head>
       <body className={`${figtree.variable} ${instrumentSerif.variable}`}>
-        {children}
-        <script src="/install-sw.js" defer />
+        <ToastProvider>
+          <AuthProvider>
+            <PermissionsProvider>
+              {children}
+            </PermissionsProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   )

@@ -310,7 +310,7 @@ html, body {
     .safe-top {
       padding-top: max(env(safe-area-inset-top), 44px);
     }
-    
+
     /* PWA Sidebar positioning */
     @media (display-mode: standalone) {
       .sidebar-pwa {
@@ -319,4 +319,96 @@ html, body {
       }
     }
   }
+}
+
+/* Next.js Development Error Overlay Customization */
+html[data-nextjs-error-overlay] {
+  background: black !important;
+}
+
+[data-nextjs-error-overlay] * {
+  background: black !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+[data-nextjs-error-overlay] pre {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-nextjs-error-overlay] .error-overlay {
+  background: black !important;
+}
+
+[data-nextjs-error-overlay] .error-header {
+  background: black !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Remove any blue/colored elements */
+[data-nextjs-error-overlay] [style*="blue"] {
+  background: black !important;
+}
+
+[data-nextjs-error-overlay] [style*="rgb(59, 130, 246)"] {
+  background: black !important;
+}
+
+/* Ensure all buttons and interactive elements are black */
+[data-nextjs-error-overlay] button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+}
+
+[data-nextjs-error-overlay] button:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Override Next.js error page styles */
+.__next-error-container {
+  background: black !important;
+  color: white !important;
+}
+
+.__next-error-container * {
+  background: black !important;
+  color: white !important;
+}
+
+/* Error boundaries */
+.error-boundary {
+  background: black;
+  color: white;
+  min-height: 100vh;
+}
+
+/* Force Next.js development overlay to be black */
+#__next div[data-nextjs-error-overlay] {
+  background: black !important;
+}
+
+/* Override any development error styling */
+div[data-nextjs-error-overlay] > div {
+  background: black !important;
+}
+
+/* Specific targeting for Next.js error overlay components */
+[data-nextjs-error-overlay] [style*="background"] {
+  background: black !important;
+}
+
+[data-nextjs-error-overlay] [style*="background-color"] {
+  background-color: black !important;
+}
+
+/* Force all Next.js error elements to black background */
+.nextjs-error,
+.nextjs-error *,
+.__next-error,
+.__next-error * {
+  background: black !important;
+  background-color: black !important;
+  color: white !important;
 }

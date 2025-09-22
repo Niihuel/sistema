@@ -6,11 +6,10 @@ import Modal from "@/components/modal"
 import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
-import PermissionGuard from "@/components/PermissionGuard"
+import { RoleGuard } from "@/components/roles/RoleGuard"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import CustomNotification from "@/components/notification"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissions } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface BackupLog {
   id: number
@@ -48,7 +47,9 @@ export default function BackupsPage() {
   const [editingBackup, setEditingBackup] = useState<BackupLog | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; backup: BackupLog | null }>({ isOpen: false, backup: null })
   const [showCalendar, setShowCalendar] = useState(false)
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState("")
@@ -766,15 +767,6 @@ export default function BackupsPage() {
         </div>
       </Modal>
 
-      {/* Notification */}
-      {notification && (
-        <CustomNotification
-          type={notification.type}
-          message={notification.message}
-          isVisible={!!notification}
-          onClose={() => setNotification(null)}
-        />
-      )}
       </div>
     </AnimatedContainer>
   )

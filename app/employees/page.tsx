@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, memo } from "react"
 import { useDebounce } from "use-debounce"
 import { useEmployees } from "@/lib/hooks/use-api"
+import { useToast } from "@/lib/hooks/use-toast"
 import Modal from "@/components/modal"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Button from "@/components/button"
@@ -10,11 +11,9 @@ import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import MobileTable from "@/components/mobile-table"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
-import PermissionGuard from "@/components/PermissionGuard"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 type Employee = {
   id: number
@@ -32,7 +31,7 @@ import { FIXED_AREAS } from "@/lib/constants/areas"
 const statusOptions = ["Activo", "Inactivo"]
 
 function EmployeesPage() {
-  const { hasRole, hasPermission, isLoading: authLoading } = useAuth()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const { showPermissionError } = usePermissionToast()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -60,7 +59,8 @@ function EmployeesPage() {
   const [form, setForm] = useState<Partial<Employee>>({ status: "Activo" })
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
 
   const filtered = useMemo(() => items, [items])
 
@@ -95,9 +95,9 @@ function EmployeesPage() {
       })
 
       const result = await exportToProfessionalExcel(exportOptions)
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error al exportar a Excel' })
+      showError('Error al exportar a Excel')
     }
   }, [filtered])
 
@@ -127,9 +127,9 @@ function EmployeesPage() {
       })
 
       const result = await exportToProfessionalPDF(exportOptions)
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error al exportar a PDF' })
+      showError('Error al exportar a PDF')
     }
   }, [filtered])
 
@@ -152,7 +152,7 @@ function EmployeesPage() {
 
   const save = useCallback(async () => {
     // Check permissions
-    if (!hasRole(['ADMIN'])) {
+    if (!can('employees:edit')) {
       showPermissionError('No tienes permisos para gestionar empleados')
       return
     }
@@ -181,13 +181,13 @@ function EmployeesPage() {
       refreshData()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }, [editing, form, refreshData])
 
   const remove = useCallback(async (id: number) => {
     // Check permissions
-    if (!hasRole(['ADMIN'])) {
+    if (!can('employees:edit')) {
       showPermissionError('No tienes permisos para eliminar empleados')
       return
     }
@@ -240,7 +240,7 @@ function EmployeesPage() {
   }
 
   // Show access denied if user doesn't have required permissions
-  if (!hasPermission('EMPLOYEES', 'read') && !hasRole(['ADMIN', 'MANAGER'])) {
+  if (!can('employees:view')) {
     return (
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -408,13 +408,6 @@ function EmployeesPage() {
         onConfirm={async () => { if (deleteId != null) { await remove(deleteId); setDeleteId(null) } }}
       />
 
-      {notification && (
-        <CustomNotification
-          type={notification.type}
-          message={notification.message}
-          isVisible={notification !== null}
-          onClose={() => setNotification(null)}
-        />
       )}
     </AnimatedContainer>
   )

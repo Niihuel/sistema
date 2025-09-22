@@ -22,9 +22,8 @@ const nextConfig = {
       ? 'http://192.168.0.219:4250'
       : 'http://192.168.0.219:4250'
   },
-  // Production optimized webpack config
+
   webpack: (config, { isServer, dev }) => {
-    // Only add essential fallbacks for client-side
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -38,65 +37,28 @@ const nextConfig = {
       }
     }
 
-    // Production optimizations
+    // Optimizaciones para producción (configuración mejorada)
     if (!dev) {
-      // Enable module concatenation for smaller bundle
-      config.optimization.concatenateModules = true
-
-      // Better minification
       config.optimization.minimize = true
 
-      // Split chunks for better caching
+      // Configuración de splitChunks mejorada para evitar errores de 'call'
       config.optimization.splitChunks = {
-        chunks: 'all',
+        chunks: 'async',
         cacheGroups: {
-          default: false,
-          vendors: false,
-          framework: {
-            chunks: 'all',
-            name: 'framework',
-            test: /(?<!node_modules.*)[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-subscription)[\\/]/,
-            priority: 40,
-            enforce: true,
-          },
-          lib: {
-            test(module) {
-              return module.size() > 160000 &&
-                /node_modules[/\\]/.test(module.identifier())
-            },
-            name(module) {
-              const hash = require('crypto')
-                .createHash('sha1')
-                .update(module.identifier())
-                .digest('hex')
-              return `lib-${hash.substring(0, 8)}`
-            },
-            priority: 30,
-            minChunks: 1,
+          vendors: {
+            test: /[\\/]node_modules[\\/]/,
+            priority: -10,
             reuseExistingChunk: true,
           },
-          commons: {
-            name: 'commons',
+          default: {
             minChunks: 2,
-            priority: 20,
-          },
-          shared: {
-            name(module, chunks) {
-              return require('crypto')
-                .createHash('sha1')
-                .update(chunks.reduce((acc, chunk) => acc + chunk.name, ''))
-                .digest('hex')
-                .substring(0, 8)
-            },
-            priority: 10,
-            minChunks: 2,
+            priority: -20,
             reuseExistingChunk: true,
           },
         },
       }
     }
 
-    // Ignore optional dependencies that may cause issues
     config.resolve.alias = {
       ...config.resolve.alias,
       'encoding': false,
@@ -104,11 +66,11 @@ const nextConfig = {
 
     return config
   },
-  // Security headers
+
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
         headers: [
           {
             key: 'X-Frame-Options',
@@ -130,6 +92,10 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
       {
@@ -147,7 +113,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Headers',
-            value: 'Content-Type, Authorization',
+            value: 'Content-Type, Authorization, X-Requested-With',
           },
           {
             key: 'Access-Control-Allow-Credentials',
@@ -157,9 +123,17 @@ const nextConfig = {
       },
     ]
   },
-  // Experimental features for production optimization
+
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
+  },
+
+  distDir: '.build',  // Usar directorio que funciona
+  cleanDistDir: true,
+  productionBrowserSourceMaps: process.env.NODE_ENV === 'development',
+
+  async rewrites() {
+    return [];
   },
 }
 

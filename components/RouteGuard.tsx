@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useAuth } from '@/components/providers/AuthProvider'
 import { useToast } from '@/lib/hooks/use-toast'
 
 // Route permissions configuration

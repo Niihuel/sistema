@@ -1,7 +1,8 @@
+import { NextRequest } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAuth, requireRole } from "@/lib/middleware"
 
-export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const ctx = requireAuth(req)
     requireRole(ctx, ["ADMIN"]) // editar solo admin
@@ -16,7 +17,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
   }
 }
 
-export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const ctx = requireAuth(req)
     requireRole(ctx, ["ADMIN"]) // eliminar solo admin

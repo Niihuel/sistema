@@ -7,11 +7,9 @@ import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
-import PermissionGuard from "@/components/PermissionGuard"
 import { validateForm, ValidationRule } from "@/lib/validation"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 interface Printer {
   id: number
@@ -34,7 +32,7 @@ const STATUS_OPTIONS = [
 import { AREA_OPTIONS } from "@/lib/constants/areas"
 
 export default function PrintersPage() {
-  const { hasRole, hasPermission, isLoading: authLoading, user, isAuthenticated } = useAuth()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const { showPermissionError, showAdminOnlyError } = usePermissionToast()
   
   // Check permissions first
@@ -61,7 +59,7 @@ export default function PrintersPage() {
     )
   }
 
-  if (!hasPermission('PRINTERS', 'read') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
+  if (!can('printers:view')) {
     return (
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -79,7 +77,8 @@ export default function PrintersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; printer: Printer | null }>({ isOpen: false, printer: null })
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   // Filtros
@@ -132,7 +131,7 @@ export default function PrintersPage() {
       }
     } catch (error) {
       console.error('Error fetching printers:', error)
-      setNotification({ type: 'error', message: 'Error al cargar impresoras' })
+      showError('Error al cargar impresoras')
     } finally {
       setLoading(false)
     }
@@ -152,13 +151,13 @@ export default function PrintersPage() {
 
     // Check permissions before saving
     if (editingPrinter) {
-      if (!hasPermission('PRINTERS', 'update') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
-        setNotification({ type: 'error', message: 'No tienes permisos para editar impresoras' })
+      if (!can('printers:edit')) {
+        showError('No tienes permisos para editar impresoras')
         return
       }
     } else {
-      if (!hasPermission('PRINTERS', 'create') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
-        setNotification({ type: 'error', message: 'No tienes permisos para crear impresoras' })
+      if (!can('printers:create')) {
+        showError('No tienes permisos para crear impresoras')
         return
       }
     }
@@ -168,7 +167,7 @@ export default function PrintersPage() {
     const validation = validateForm(formData, validationRules)
     if (!validation.isValid) {
       setFormErrors(validation.errors)
-      setNotification({ type: 'error', message: validation.firstError || 'Por favor corrige los errores en el formulario' })
+      showError(validation.firstError || 'Por favor corrige los errores en el formulario')
       return
     }
 
@@ -186,14 +185,14 @@ export default function PrintersPage() {
         await fetchPrinters()
         resetForm()
         setIsModalOpen(false)
-        setNotification({ type: 'success', message: `Impresora ${editingPrinter ? 'actualizada' : 'creada'} correctamente` })
+        showSuccess(`Impresora ${editingPrinter ? 'actualizada' : 'creada'} correctamente`)
       } else {
         const errorData = await response.json()
-        setNotification({ type: 'error', message: errorData.error || `Error ${editingPrinter ? 'actualizando' : 'creando'} impresora` })
+        showError(errorData.error || `Error ${editingPrinter ? 'actualizando' : 'creando'} impresora`)
       }
     } catch (error) {
       console.error('Error saving printer:', error)
-      setNotification({ type: 'error', message: `Error ${editingPrinter ? 'actualizando' : 'creando'} impresora` })
+      showError(`Error ${editingPrinter ? 'actualizando' : 'creando'} impresora`)
     }
   }
 
@@ -221,14 +220,14 @@ export default function PrintersPage() {
       if (response.ok) {
         await fetchPrinters()
         setDeleteConfirm({ isOpen: false, printer: null })
-        setNotification({ type: 'success', message: 'Impresora eliminada correctamente' })
+        showSuccess('Impresora eliminada correctamente')
       } else {
         const errorData = await response.json()
-        setNotification({ type: 'error', message: errorData.error || 'Error eliminando impresora' })
+        showError(errorData.error || 'Error eliminando impresora')
       }
     } catch (error) {
       console.error('Error deleting printer:', error)
-      setNotification({ type: 'error', message: 'Error eliminando impresora' })
+      showError('Error eliminando impresora')
     }
   }
 
@@ -557,11 +556,9 @@ export default function PrintersPage() {
         cancelText="Cancelar"
       />
 
-      <CustomNotification
         type={notification?.type || 'info'}
         message={notification?.message || ''}
         isVisible={!!notification}
-        onClose={() => setNotification(null)}
       />
     </AnimatedContainer>
   )

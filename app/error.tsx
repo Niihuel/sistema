@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/button'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { usePermissionsV2 } from '@/lib/hooks/usePermissionsV2'
 
 export default function Error({
   error,
@@ -13,7 +13,8 @@ export default function Error({
   reset: () => void
 }) {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, loading: isLoading } = usePermissionsV2()
+  const isAuthenticated = !!user
 
   useEffect(() => {
     // Log the error to an error reporting service

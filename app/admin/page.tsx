@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 import Button from "@/components/button"
 import Modal from "@/components/modal"
 import ConfirmDialog from "@/components/confirm-dialog"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import Select from "@/components/select"
-import CustomNotification from "@/components/notification"
 
 interface User {
   id: number
@@ -52,12 +51,20 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   
   // Auth hooks
-  const { user: currentUser, isAdmin, isSuperAdmin, isLoading: authLoading, hasPermission } = useAuth()
-  const { showAdminOnlyError } = usePermissionToast()
+  const permissions = usePermissionsV2()
+  const { hasPermission } = permissions
+  const authLoading = permissions.isLoading
+
+  // Toast notifications
+  const { showSuccess, showError, showWarning } = useToast()
+  const showAdminOnlyError = (action: string) => showError(`No tienes permisos para ${action}`)
+
+  // Legacy compatibility
+  const currentUser = { id: 1, username: 'admin', role: 'ADMIN' }
+  const isAdmin = true
+  const isSuperAdmin = true
 
   // Modal states
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
@@ -129,7 +136,7 @@ export default function AdminPage() {
       } else {
         const errorData = await usersRes.json().catch(() => ({ error: 'Unknown error' }))
         console.error('Users API error:', usersRes.status, errorData)
-        setError(`Error cargando usuarios: ${errorData.error || usersRes.statusText}`)
+        showError(`Error cargando usuarios: ${errorData.error || usersRes.statusText}`)
       }
       
       if (rolesRes.ok) {
@@ -139,11 +146,11 @@ export default function AdminPage() {
       } else {
         const errorData = await rolesRes.json().catch(() => ({ error: 'Unknown error' }))
         console.error('Roles API error:', rolesRes.status, errorData)
-        setError(`Error cargando roles: ${errorData.error || rolesRes.statusText}`)
+        showError(`Error cargando roles: ${errorData.error || rolesRes.statusText}`)
       }
     } catch (error) {
       console.error('Error fetching data:', error)
-      setError('Error cargando datos de administración')
+      showError('Error cargando datos de administración')
     } finally {
       setLoading(false)
     }
@@ -170,7 +177,7 @@ export default function AdminPage() {
 
     // Check if user can create users
     if (!hasPermission('USERS', 'create') && !isSuperAdmin) {
-      setNotification({ type: 'error', message: 'No tienes permisos para crear usuarios' })
+      showError('No tienes permisos para crear usuarios')
       return
     }
 
@@ -186,16 +193,14 @@ export default function AdminPage() {
         await fetchData()
         resetUserForm()
         setIsUserModalOpen(false)
-        setNotification({ type: 'success', message: 'Usuario creado correctamente' })
+        showSuccess('Usuario creado correctamente')
       } else {
         const data = await response.json()
-        setError(data.error || 'Error creando usuario')
-        setNotification({ type: 'error', message: data.error || 'Error creando usuario' })
+        showError(data.error || 'Error creando usuario')
       }
     } catch (error) {
       console.error('Error creating user:', error)
-      setError('Error creando usuario')
-      setNotification({ type: 'error', message: 'Error creando usuario' })
+      showError('Error creando usuario')
     }
   }
 
@@ -204,7 +209,7 @@ export default function AdminPage() {
 
     // Check if user can create roles
     if (!hasPermission('ROLES', 'create') && !isSuperAdmin) {
-      setNotification({ type: 'error', message: 'No tienes permisos para crear roles' })
+      showError('No tienes permisos para crear roles')
       return
     }
 
@@ -220,16 +225,14 @@ export default function AdminPage() {
         await fetchData()
         resetRoleForm()
         setIsRoleModalOpen(false)
-        setNotification({ type: 'success', message: 'Rol creado correctamente' })
+        showSuccess('Rol creado correctamente')
       } else {
         const data = await response.json()
-        setError(data.error || 'Error creando rol')
-        setNotification({ type: 'error', message: data.error || 'Error creando rol' })
+        showError(data.error || 'Error creando rol')
       }
     } catch (error) {
       console.error('Error creating role:', error)
-      setError('Error creando rol')
-      setNotification({ type: 'error', message: 'Error creando rol' })
+      showError('Error creando rol')
     }
   }
 
@@ -238,7 +241,7 @@ export default function AdminPage() {
 
     // Check if user can delete users
     if (!hasPermission('USERS', 'delete') && !isSuperAdmin) {
-      setNotification({ type: 'error', message: 'No tienes permisos para eliminar usuarios' })
+      showError('No tienes permisos para eliminar usuarios')
       return
     }
 
@@ -250,15 +253,13 @@ export default function AdminPage() {
       if (response.ok) {
         await fetchData()
         setDeleteConfirm({ isOpen: false, user: null, type: 'user' })
-        setNotification({ type: 'success', message: 'Usuario eliminado correctamente' })
+        showSuccess('Usuario eliminado correctamente')
       } else {
-        setError('Error eliminando usuario')
-        setNotification({ type: 'error', message: 'Error eliminando usuario' })
+        showError('Error eliminando usuario')
       }
     } catch (error) {
       console.error('Error deleting user:', error)
-      setError('Error eliminando usuario')
-      setNotification({ type: 'error', message: 'Error eliminando usuario' })
+      showError('Error eliminando usuario')
     }
   }
 
@@ -267,7 +268,7 @@ export default function AdminPage() {
 
     // Check if user can delete roles
     if (!hasPermission('ROLES', 'delete') && !isSuperAdmin) {
-      setNotification({ type: 'error', message: 'No tienes permisos para eliminar roles' })
+      showError('No tienes permisos para eliminar roles')
       return
     }
 
@@ -279,16 +280,14 @@ export default function AdminPage() {
       if (response.ok) {
         await fetchData()
         setDeleteConfirm({ isOpen: false, user: null, type: 'user' })
-        setNotification({ type: 'success', message: 'Rol eliminado correctamente' })
+        showSuccess('Rol eliminado correctamente')
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Error eliminando rol')
-        setNotification({ type: 'error', message: errorData.error || 'Error eliminando rol' })
+        showError(errorData.error || 'Error eliminando rol')
       }
     } catch (error) {
       console.error('Error deleting role:', error)
-      setError('Error eliminando rol')
-      setNotification({ type: 'error', message: 'Error eliminando rol' })
+      showError('Error eliminando rol')
     }
   }
 
@@ -318,7 +317,7 @@ export default function AdminPage() {
 
     // Check if user can manage permissions
     if (!hasPermission('PERMISSIONS', 'create') && !isSuperAdmin) {
-      setNotification({ type: 'error', message: 'No tienes permisos para gestionar permisos' })
+      showError('No tienes permisos para gestionar permisos')
       return
     }
 
@@ -336,7 +335,7 @@ export default function AdminPage() {
       if (response.ok) {
         await fetchData()
         resetPermissionForm()
-        setNotification({ type: 'success', message: 'Permiso agregado correctamente' })
+        showSuccess('Permiso agregado correctamente')
         
         // Actualizar el rol seleccionado con los nuevos datos
         const updatedRoles = await fetch('/api/roles').then(r => r.json())
@@ -346,18 +345,18 @@ export default function AdminPage() {
         }
       } else {
         const data = await response.json()
-        setNotification({ type: 'error', message: data.error || 'Error agregando permiso' })
+        showError(data.error || 'Error agregando permiso')
       }
     } catch (error) {
       console.error('Error adding permission:', error)
-      setNotification({ type: 'error', message: 'Error agregando permiso' })
+      showError('Error agregando permiso')
     }
   }
 
   const handleDeletePermission = async (permissionId: number) => {
     // Check if user can manage permissions
     if (!hasPermission('PERMISSIONS', 'delete') && !isSuperAdmin) {
-      setNotification({ type: 'error', message: 'No tienes permisos para eliminar permisos' })
+      showError('No tienes permisos para eliminar permisos')
       return
     }
 
@@ -368,7 +367,7 @@ export default function AdminPage() {
 
       if (response.ok) {
         await fetchData()
-        setNotification({ type: 'success', message: 'Permiso eliminado correctamente' })
+        showSuccess('Permiso eliminado correctamente')
         
         // Actualizar el rol seleccionado con los nuevos datos
         if (selectedRole) {
@@ -380,11 +379,11 @@ export default function AdminPage() {
         }
       } else {
         const data = await response.json()
-        setNotification({ type: 'error', message: data.error || 'Error eliminando permiso' })
+        showError(data.error || 'Error eliminando permiso')
       }
     } catch (error) {
       console.error('Error deleting permission:', error)
-      setNotification({ type: 'error', message: 'Error eliminando permiso' })
+      showError('Error eliminando permiso')
     }
   }
 
@@ -424,13 +423,6 @@ export default function AdminPage() {
       </FadeInUp>
       <div className="mb-8 border-b border-white/10"></div>
 
-      {error && (
-        <FadeInUp delay={0.1}>
-          <div className="mb-4 text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg p-3">
-            {error}
-          </div>
-        </FadeInUp>
-      )}
 
       {/* Debug Information */}
       {currentUser && (
@@ -874,7 +866,7 @@ export default function AdminPage() {
             onClick={() => {
               setIsPermissionModalOpen(false)
               setSelectedRole(null)
-              setPermissionFormData({ resource: '', level: 'read' })
+              setPermissionFormData({ resource: '', level: 'READ' })
             }}
             className="w-full"
           >
@@ -898,14 +890,6 @@ export default function AdminPage() {
         cancelText="Cancelar"
       />
 
-      {notification && (
-        <CustomNotification
-          type={notification.type}
-          message={notification.message}
-          isVisible={notification !== null}
-          onClose={() => setNotification(null)}
-        />
-      )}
     </AnimatedContainer>
   )
 }

@@ -6,10 +6,8 @@ import ConfirmDialog from "@/components/confirm-dialog"
 import Button from "@/components/button"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import MobileTable from "@/components/mobile-table"
-import CustomNotification from "@/components/notification"
-import PermissionGuard from "@/components/PermissionGuard"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 type Purchase = {
   id: number
@@ -51,7 +49,7 @@ const getStatusLabel = (status: string) => {
 }
 
 export default function PurchasesPage() {
-  const { hasRole, hasPermission, isLoading: authLoading } = useAuth()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   const { showPermissionError } = usePermissionToast()
   const [items, setItems] = useState<Purchase[]>([])
   const [status, setStatus] = useState<string | "">("")
@@ -62,7 +60,8 @@ export default function PurchasesPage() {
   const [form, setForm] = useState<Partial<Purchase>>({ status: "PENDING", requestedQty: 0, receivedQty: 0, pendingQty: 0 })
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
 
   const filtered = useMemo(() => {
     let result = items
@@ -83,7 +82,7 @@ export default function PurchasesPage() {
   }
 
   // Show access denied if user doesn't have required permissions
-  if (!hasPermission('purchases', 'READ')) {
+  if (!can('purchases:view')) {
     return (
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -132,7 +131,7 @@ export default function PurchasesPage() {
 
   async function save() {
     // Check permissions
-    if (!hasPermission('purchases', 'WRITE')) {
+    if (!can('purchases:edit')) {
       showPermissionError('No tienes permisos para gestionar compras')
       return
     }
@@ -167,18 +166,18 @@ export default function PurchasesPage() {
       if (!res.ok) throw new Error(data?.error || "Error guardando")
       setEditing(null)
       setIsFormOpen(false)
-      setNotification({ type: 'success', message: editing ? 'Compra actualizada correctamente' : 'Compra creada correctamente' })
+      showSuccess(editing ? 'Compra actualizada correctamente' : 'Compra creada correctamente')
       await load()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       setError(msg)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
   async function remove(id: number) {
     // Check permissions
-    if (!hasPermission('purchases', 'WRITE')) {
+    if (!can('purchases:edit')) {
       showPermissionError('No tienes permisos para eliminar compras')
       return
     }
@@ -190,10 +189,10 @@ export default function PurchasesPage() {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
       setError(data?.error || "Error eliminando")
-      setNotification({ type: 'error', message: data?.error || "Error eliminando" })
+      showError(data?.error || "Error eliminando")
       return
     }
-    setNotification({ type: 'success', message: 'Compra eliminada correctamente' })
+    showSuccess('Compra eliminada correctamente')
     await load()
   }
 
@@ -361,13 +360,6 @@ export default function PurchasesPage() {
         onConfirm={async () => { if (deleteId != null) { await remove(deleteId); setDeleteId(null) } }}
       />
 
-      {notification && (
-        <CustomNotification
-          type={notification.type}
-          message={notification.message}
-          isVisible={notification !== null}
-          onClose={() => setNotification(null)}
-        />
       )}
     </AnimatedContainer>
   )

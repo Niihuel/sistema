@@ -8,12 +8,10 @@ import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import MobileTable from "@/components/mobile-table"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
-import CustomNotification from "@/components/notification"
-import PermissionGuard from "@/components/PermissionGuard"
 import { validateForm, ValidationRule } from "@/lib/validation"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { useAuth } from "@/lib/hooks/useAuth"
-import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
+import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useToast } from "@/lib/hooks/use-toast"
 
 type Equipment = {
   id: number
@@ -113,8 +111,7 @@ const OPERATING_SYSTEMS = [
 const storageTypes = ["SSD", "HDD", "N/A"]
 
 export default function EquipmentPage() {
-  const { hasRole, hasPermission, isLoading: authLoading, user, isAuthenticated } = useAuth()
-  const { showPermissionError, showAdminOnlyError } = usePermissionToast()
+  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
   
   // Check permissions first
   if (authLoading) {
@@ -140,7 +137,7 @@ export default function EquipmentPage() {
     )
   }
 
-  if (!hasPermission('EQUIPMENT', 'read') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
+  if (!can('equipment:view')) {
     return (
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -166,7 +163,8 @@ export default function EquipmentPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [viewItem, setViewItem] = useState<Equipment | null>(null)
-  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  // Toast notifications
+  const { showSuccess, showError } = useToast()
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   const filtered = useMemo(() => items, [items])
@@ -202,9 +200,9 @@ export default function EquipmentPage() {
       })
 
       const result = await exportToProfessionalExcel(exportOptions)
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error al exportar a Excel' })
+      showError('Error al exportar a Excel')
     }
   }
 
@@ -234,9 +232,9 @@ export default function EquipmentPage() {
       })
 
       const result = await exportToProfessionalPDF(exportOptions)
-      setNotification({ type: result.success ? 'success' : 'error', message: result.message })
+      result.success ? showSuccess(result.message) : showError(result.message)
     } catch (error) {
-      setNotification({ type: 'error', message: 'Error al exportar a PDF' })
+      showError('Error al exportar a PDF')
     }
   }
 
@@ -309,13 +307,13 @@ export default function EquipmentPage() {
 
     // Check permissions before saving
     if (editing) {
-      if (!hasPermission('EQUIPMENT', 'update') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
-        setNotification({ type: 'error', message: 'No tienes permisos para editar equipos' })
+      if (!can('equipment:edit')) {
+        showError('No tienes permisos para editar equipos')
         return
       }
     } else {
-      if (!hasPermission('EQUIPMENT', 'create') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
-        setNotification({ type: 'error', message: 'No tienes permisos para crear equipos' })
+      if (!can('equipment:create')) {
+        showError('No tienes permisos para crear equipos')
         return
       }
     }
@@ -323,7 +321,7 @@ export default function EquipmentPage() {
     const validation = validateForm(form, validationRules)
     if (!validation.isValid) {
       setFormErrors(validation.errors)
-      setNotification({ type: 'error', message: validation.firstError || 'Por favor corrige los errores en el formulario' })
+      showError(validation.firstError || 'Por favor corrige los errores en el formulario')
       return
     }
 
@@ -369,17 +367,17 @@ export default function EquipmentPage() {
         setForm({ status: "Activo", type: "Desktop" })
         setFormErrors({})
         setIsFormOpen(false)
-        setNotification({ type: 'success', message: editing ? 'Equipo actualizado correctamente' : 'Equipo creado correctamente' })
+        showSuccess(editing ? 'Equipo actualizado correctamente' : 'Equipo creado correctamente')
         await load()
       } else {
         const errorData = await res.json()
         console.error('Server error:', errorData)
-        setNotification({ type: 'error', message: errorData.error || 'Error al guardar el equipo' })
+        showError(errorData.error || 'Error al guardar el equipo')
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
       console.error('Equipment save error:', msg, e)
-      setNotification({ type: 'error', message: msg })
+      showError(msg)
     }
   }
 
@@ -387,8 +385,8 @@ export default function EquipmentPage() {
     setError(null)
 
     // Check permissions before deleting
-    if (!hasPermission('EQUIPMENT', 'delete') && !hasRole(['ADMIN'])) {
-      setNotification({ type: 'error', message: 'No tienes permisos para eliminar equipos' })
+    if (!can('equipment:delete')) {
+      showError('No tienes permisos para eliminar equipos')
       return
     }
 
@@ -419,10 +417,10 @@ export default function EquipmentPage() {
       render: (_: unknown, item: Record<string, unknown>) => (
         <div className="flex gap-2 justify-end">
           <Button onClick={() => setViewItem(item as Equipment)} variant="ghost" small>Ver</Button>
-          {(hasPermission('EQUIPMENT', 'update') || hasRole(['ADMIN', 'TECHNICIAN'])) && (
+          {can('equipment:edit') && (
             <Button onClick={() => openEdit(item as Equipment)} variant="ghost" small>Editar</Button>
           )}
-          {(hasPermission('EQUIPMENT', 'delete') || hasRole(['ADMIN'])) && (
+          {can('equipment:delete') && (
             <Button onClick={() => setDeleteId(item.id as number)} small>Eliminar</Button>
           )}
         </div>
@@ -459,7 +457,7 @@ export default function EquipmentPage() {
           <Button onClick={() => load()} className="text-sm">Filtrar</Button>
           <Button onClick={handleExportExcel} variant="ghost" className="text-sm">Excel</Button>
           <Button onClick={handleExportPDF} variant="ghost" className="text-sm">PDF</Button>
-          {(hasPermission('EQUIPMENT', 'create') || hasRole(['ADMIN', 'TECHNICIAN'])) && (
+          {can('equipment:create') && (
             <Button onClick={() => openCreate()} variant="ghost" className="text-sm">Nuevo Equipo</Button>
           )}
         </div>
@@ -506,10 +504,10 @@ export default function EquipmentPage() {
                   <td className="p-2 sm:p-3">
                     <div className="flex gap-1 sm:gap-2">
                       <Button onClick={() => setViewItem(p)} variant="ghost" small className="text-xs">Ver</Button>
-                      {(hasPermission('EQUIPMENT', 'update') || hasRole(['ADMIN', 'TECHNICIAN'])) && (
+                      {can('equipment:edit') && (
                         <Button onClick={() => openEdit(p)} variant="ghost" small className="text-xs">Editar</Button>
                       )}
-                      {(hasPermission('EQUIPMENT', 'delete') || hasRole(['ADMIN'])) && (
+                      {can('equipment:delete') && (
                         <Button onClick={() => setDeleteId(p.id)} small className="text-xs">Eliminar</Button>
                       )}
                     </div>
@@ -915,12 +913,6 @@ export default function EquipmentPage() {
         )}
       </Modal>
 
-      <CustomNotification
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-        onClose={() => setNotification(null)}
-      />
       
       <ConfirmDialog
         open={deleteId !== null}

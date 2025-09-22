@@ -1,7 +1,7 @@
 "use client"
 
 import { ReactNode } from 'react'
-import { useAuth } from '@/lib/hooks/useAuth'
+import { useAuth } from '@/components/providers/AuthProvider'
 import { useToast } from '@/lib/hooks/use-toast'
 
 interface PermissionGuardProps {
