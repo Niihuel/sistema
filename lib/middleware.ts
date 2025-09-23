@@ -157,6 +157,12 @@ export function requireRole(context: AuthContext, allowedRoles: string[]): void 
     }
 
     // CORRECCIÓN: Verificar si el usuario tiene uno de los roles permitidos
+    // SUPER_ADMIN siempre tiene todos los permisos
+    if (userRole === 'SUPER_ADMIN') {
+      return; // SUPER_ADMIN puede hacer todo
+    }
+
+    // Si el usuario no es SUPER_ADMIN, verificar si tiene uno de los roles permitidos
     if (!normalizedAllowedRoles.includes(userRole)) {
       throw new AuthError(
         `Permisos insuficientes. Se requiere: ${allowedRoles.join(', ')}. Actual: ${context.role}`,

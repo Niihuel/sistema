@@ -9,7 +9,7 @@ import { usePermissionCheck } from "@/components/PermissionGuard"
 import AdaptiveTransparency from "@/components/adaptive-transparency"
 import DatabaseConfig from "@/components/db-config"
 import NotificationBell from "@/components/notifications/NotificationBell"
-import { Menu, X, Settings, LogOut, Home, Users, Monitor, Package, Printer, UserCircle, Shield, Cloud, ShoppingCart, Ticket } from "lucide-react"
+import { Menu, X, Settings, LogOut, Home, Users, Monitor, Package, Printer, UserCircle, Shield, Cloud, ShoppingCart, Ticket, Crown, Key } from "lucide-react"
 
 function Header() {
   const [open, setOpen] = useState(false)
@@ -89,22 +89,10 @@ function Header() {
       requiresPermission: () => hasPermission('PRINTERS', 'read') || hasRole(['ADMIN', 'TECHNICIAN'])
     },
     {
-      href: "/users",
-      label: "Usuarios",
-      icon: UserCircle,
-      requiresPermission: () => hasPermission('USERS', 'read') || hasRole(['ADMIN'])
-    },
-    {
-      href: "/admin",
-      label: "Administración",
-      icon: Shield,
-      requiresPermission: () => hasPermission('ADMIN_PANEL', 'read') || isAdmin || isSuperAdmin
-    },
-    {
-      href: "/backups",
-      label: "Backups",
-      icon: Cloud,
-      requiresPermission: () => hasPermission('BACKUPS', 'read') || hasRole(['ADMIN', 'TECHNICIAN'])
+      href: "/tickets",
+      label: "Solicitudes",
+      icon: Ticket,
+      requiresPermission: () => hasPermission('TICKETS', 'read') || hasRole(['ADMIN', 'TECHNICIAN'])
     },
     {
       href: "/purchase-requests",
@@ -113,10 +101,28 @@ function Header() {
       requiresPermission: () => hasPermission('PURCHASE_REQUESTS', 'read') || hasRole(['ADMIN', 'TECHNICIAN'])
     },
     {
-      href: "/tickets",
-      label: "Solicitudes",
-      icon: Ticket,
-      requiresPermission: () => hasPermission('TICKETS', 'read') || hasRole(['ADMIN', 'TECHNICIAN'])
+      href: "/admin/users",
+      label: "Usuarios",
+      icon: UserCircle,
+      requiresPermission: () => hasPermission('USERS', 'read') || hasRole(['ADMIN'])
+    },
+    {
+      href: "/admin/roles",
+      label: "Roles",
+      icon: Crown,
+      requiresPermission: () => hasPermission('ROLES', 'read') || isAdmin || isSuperAdmin
+    },
+    {
+      href: "/admin",
+      label: "Panel Admin",
+      icon: Shield,
+      requiresPermission: () => hasPermission('ADMIN_PANEL', 'read') || isAdmin || isSuperAdmin
+    },
+    {
+      href: "/backups",
+      label: "Backups",
+      icon: Cloud,
+      requiresPermission: () => hasPermission('BACKUPS', 'read') || hasRole(['ADMIN', 'TECHNICIAN'])
     },
   ]
 

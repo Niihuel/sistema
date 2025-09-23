@@ -100,7 +100,7 @@ export default function HomePage() {
               
               <div className="flex items-center justify-between">
                 <span className="text-gray-300">IP del Servidor</span>
-                <span className="text-blue-400 font-mono">192.168.143.163:4250</span>
+                <span className="text-blue-400 font-mono">192.168.0.219:4250</span>
               </div>
               
               {status?.timestamp && (
@@ -155,7 +155,7 @@ export default function HomePage() {
                 <div>
                   <h3 className="text-yellow-500 font-semibold mb-1">Base de Datos No Disponible</h3>
                   <p className="text-yellow-200 text-sm">
-                    El servidor SQL Server en <code className="bg-yellow-800/30 px-1 rounded">192.168.143.163:1435</code> no está disponible. 
+                    El servidor SQL Server en <code className="bg-yellow-800/30 px-1 rounded">192.168.0.219:1433</code> no está disponible. 
                     Algunas funcionalidades pueden estar limitadas.
                   </p>
                 </div>

@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
         })
       }
       
-      // Si es admin, devolver todos los usuarios con toda la información
-      requireRole(ctx, ["ADMIN"])
+      // Si es admin o super_admin, devolver todos los usuarios con toda la información
+      requireRole(ctx, ["ADMIN", "SUPER_ADMIN"])
       return await prisma.user.findMany({ 
         select: { id: true, username: true, role: true, createdAt: true } 
       })
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const ctx = requireAuth(req)
-    requireRole(ctx, ["ADMIN"])
+    requireRole(ctx, ["ADMIN", "SUPER_ADMIN"])
     const { username, password, role } = await req.json()
     if (!username || !password) return Response.json({ error: "username y password requeridos" }, { status: 400 })
     const passwordHash = await hashPassword(password)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback } from "react"
+import { useMemo, useState, useCallback, memo } from "react"
 import { useDebounce } from "use-debounce"
 import { useEmployees } from "@/lib/hooks/use-api"
 import { useToast } from "@/lib/hooks/use-toast"

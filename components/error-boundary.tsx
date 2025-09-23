@@ -130,85 +130,109 @@ export default class ErrorBoundary extends Component<Props, State> {
         return <>{this.props.fallback}</>
       }
 
-      // Default error UI
+      // Default error UI - Professional design similar to HTTP 500 error page
       return (
-        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full">
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl border border-red-500/20 p-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-semibold text-white">
-                    {this.state.error?.message?.includes('webpack')
-                      ? 'Error de carga del módulo'
-                      : 'Ha ocurrido un error'}
-                  </h1>
-                  <p className="text-gray-400 mt-1">
-                    {this.state.error?.message?.includes('webpack')
-                      ? 'La página se recargará automáticamente en unos segundos...'
-                      : isDev
-                        ? `Error: ${this.state.error?.message || 'Unknown error'}`
-                        : 'Algo salió mal. Por favor, intenta recargar la página.'}
-                  </p>
+        <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
+          <div className="max-w-3xl w-full">
+            <div className="bg-black/60 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
+              {/* Error Header - No blue line */}
+              <div className="bg-gradient-to-r from-red-600/10 via-red-500/5 to-transparent p-8">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h1 className="text-3xl font-bold text-white mb-2">
+                      Ha ocurrido un error
+                    </h1>
+                    <p className="text-gray-400 text-lg">
+                      {isDev
+                        ? `Error: ${this.state.error?.message || 'Error desconocido'}`
+                        : 'El sistema encontró un problema inesperado'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {isDev && this.state.error && (
-                <div className="mb-6">
-                  <details className="group cursor-pointer">
-                    <summary className="text-sm text-gray-400 hover:text-gray-300 transition-colors">
-                      Ver detalles del error
-                    </summary>
-                    <div className="mt-4 space-y-4">
-                      <div className="bg-black/50 rounded-lg p-4">
-                        <p className="text-xs text-gray-500 mb-2">Error ID: {this.state.errorId}</p>
-                        <pre className="text-xs text-gray-400 overflow-auto max-h-64 whitespace-pre-wrap">
-                          {this.state.error.stack}
-                        </pre>
-                      </div>
-                      {this.state.errorInfo && (
-                        <div className="bg-black/50 rounded-lg p-4">
-                          <p className="text-xs text-gray-500 mb-2">Component Stack:</p>
-                          <pre className="text-xs text-gray-400 overflow-auto max-h-64 whitespace-pre-wrap">
-                            {this.state.errorInfo.componentStack}
+              {/* Error Details Section */}
+              <div className="p-8 pt-0">
+                {isDev && this.state.error && (
+                  <div className="mb-6">
+                    <details className="group">
+                      <summary className="flex items-center gap-2 cursor-pointer text-sm text-gray-500 hover:text-gray-300 transition-colors font-medium">
+                        <svg className="w-4 h-4 transform group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        Ver detalles del error
+                      </summary>
+                      <div className="mt-4 space-y-4">
+                        {/* Error ID Badge */}
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-full">
+                          <span className="text-xs text-gray-400">ID de error:</span>
+                          <code className="text-xs text-orange-400 font-mono">{this.state.errorId}</code>
+                        </div>
+
+                        {/* Error Message */}
+                        <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+                          <h4 className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">
+                            ReferenceError: {this.state.error.message}
+                          </h4>
+                          <pre className="text-xs text-gray-300 font-mono overflow-x-auto whitespace-pre-wrap">
+{this.state.error.stack}
                           </pre>
                         </div>
-                      )}
-                    </div>
-                  </details>
+
+                        {/* Component Stack */}
+                        {this.state.errorInfo && (
+                          <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+                            <h4 className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">
+                              Pila de componentes:
+                            </h4>
+                            <pre className="text-xs text-gray-300 font-mono overflow-x-auto max-h-48">
+{this.state.errorInfo.componentStack}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={this.handleReset}
+                    className="flex-1 min-w-[120px] px-5 py-3 bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-xl transition-all duration-200 border border-gray-700"
+                  >
+                    Intentar de nuevo
+                  </button>
+                  <button
+                    onClick={this.handleReload}
+                    className="flex-1 min-w-[120px] px-5 py-3 bg-white hover:bg-gray-100 text-black font-medium rounded-xl transition-all duration-200"
+                  >
+                    Recargar página
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/dashboard'}
+                    className="flex-1 min-w-[120px] px-5 py-3 bg-gray-800 hover:bg-gray-700 text-white font-medium rounded-xl transition-all duration-200 border border-gray-700"
+                  >
+                    Tablero de Instrumentos de IT Portal
+                  </button>
                 </div>
-              )}
 
-              <div className="flex gap-3">
-                <button
-                  onClick={this.handleReset}
-                  className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200 hover:scale-105"
-                >
-                  Intentar de nuevo
-                </button>
-                <button
-                  onClick={this.handleReload}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 hover:scale-105"
-                >
-                  Recargar página
-                </button>
-                <button
-                  onClick={() => window.location.href = '/dashboard'}
-                  className="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all duration-200 hover:scale-105"
-                >
-                  Ir al Dashboard
-                </button>
+                {/* Footer Message */}
+                {!isDev && (
+                  <div className="mt-6 pt-6 border-t border-gray-800">
+                    <p className="text-xs text-gray-500 text-center">
+                      Si el problema persiste, contacta con el equipo de soporte técnico.
+                    </p>
+                  </div>
+                )}
               </div>
-
-              {!isDev && (
-                <p className="text-xs text-gray-500 mt-6">
-                  Error ID: {this.state.errorId} - Este ID ha sido registrado para su análisis.
-                </p>
-              )}
             </div>
           </div>
         </div>
