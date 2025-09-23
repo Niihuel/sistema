@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 
 type Area = { id: number; name: string }
 

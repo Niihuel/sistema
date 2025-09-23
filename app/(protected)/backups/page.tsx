@@ -1,15 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
+import AnimatedContainer from "@/components/animated-container"
 import Modal from "@/components/modal"
 import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
-import { RoleGuard } from "@/components/roles/RoleGuard"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissions } from "@/lib/hooks/usePermissionsV2"
 import { useToast } from "@/lib/hooks/use-toast"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
+import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
 
 interface BackupLog {
   id: number
@@ -37,8 +37,15 @@ const STATUS_OPTIONS = [
   { value: 'SCHEDULED', label: 'Programado' }
 ]
 
+type FilterOption = {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label: string }[]
+}
+
 export default function BackupsPage() {
-  const { user, hasRole, hasPermission, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading, hasRole, hasPermission } = useAppAuth()
   const { showPermissionError } = usePermissionToast()
   const [backups, setBackups] = useState<BackupLog[]>([])
   const [filteredBackups, setFilteredBackups] = useState<BackupLog[]>([])
@@ -148,22 +155,13 @@ export default function BackupsPage() {
       const result = await exportToProfessionalExcel(exportOptions)
       
       if (result.success) {
-        setNotification({ 
-          type: 'success', 
-          message: result.message
-        })
+        showSuccess(result.message)
       } else {
-        setNotification({ 
-          type: 'error', 
-          message: result.message
-        })
+        showError(result.message)
       }
     } catch (error) {
       console.error('Error exporting to Excel:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error inesperado al exportar a Excel. Por favor, intenta nuevamente.'
-      })
+      showError('Error inesperado al exportar a Excel. Por favor, intenta nuevamente.')
     }
   }
 
@@ -212,22 +210,13 @@ export default function BackupsPage() {
       const result = await exportToProfessionalPDF(exportOptions)
       
       if (result.success) {
-        setNotification({ 
-          type: 'success', 
-          message: result.message
-        })
+        showSuccess(result.message)
       } else {
-        setNotification({ 
-          type: 'error', 
-          message: result.message
-        })
+        showError(result.message)
       }
     } catch (error) {
       console.error('Error exporting to PDF:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error inesperado al exportar a PDF. Por favor, intenta nuevamente.'
-      })
+      showError('Error inesperado al exportar a PDF. Por favor, intenta nuevamente.')
     }
   }
 
@@ -235,7 +224,7 @@ export default function BackupsPage() {
     e.preventDefault()
     
     // Check permissions
-    if (!hasPermission('BACKUPS', 'create') && !hasPermission('BACKUPS', 'update')) {
+    if (!hasPermission('backups:create') && !hasPermission('backups:update')) {
       showPermissionError('No tienes permisos para gestionar backups')
       return
     }
@@ -287,7 +276,7 @@ export default function BackupsPage() {
     if (!deleteConfirm.backup) return
     
     // Check permissions
-    if (!hasPermission('BACKUPS', 'delete')) {
+    if (!hasPermission('backups:delete')) {
       showPermissionError('No tienes permisos para eliminar backups')
       return
     }
@@ -353,18 +342,16 @@ export default function BackupsPage() {
     }
   }
 
-
   const formatGigabytes = (sizeGB?: number) => {
     if (!sizeGB) return '-'
     return `${sizeGB.toFixed(2)} GB`
   }
 
-
-  const filterOptions = [
+  const filterOptions: FilterOption[] = [
     {
       label: 'Estado',
       value: statusFilter,
-      onChange: setStatusFilter,
+      onChange: (value: string) => setStatusFilter(value),
       options: [
         { value: '', label: 'Todos los estados' },
         ...STATUS_OPTIONS
@@ -373,7 +360,7 @@ export default function BackupsPage() {
     {
       label: 'Disco',
       value: diskFilter,
-      onChange: setDiskFilter,
+      onChange: (value: string) => setDiskFilter(value),
       options: [
         { value: '', label: 'Todos los discos' },
         ...DISK_OPTIONS
@@ -391,8 +378,23 @@ export default function BackupsPage() {
     )
   }
 
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white p-4 sm:p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder a esta página.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  const hasRoleAccess = hasRole('SuperAdmin') || hasRole('Admin') || hasRole('Technician')
+
   // Show access denied if user doesn't have required permissions
-  if (!hasPermission('BACKUPS', 'read') && !hasRole(['ADMIN', 'TECHNICIAN'])) {
+  if (!hasPermission('backups:view') && !hasRoleAccess) {
     return (
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -430,11 +432,11 @@ export default function BackupsPage() {
           {filterOptions.map((filter, index) => (
             <div key={index} className="w-full sm:w-auto min-w-[180px]">
               <label className="block text-xs sm:text-sm text-white/70 mb-1">{filter.label}</label>
-              <Select value={filter.value} onChange={filter.onChange as (v: string)=>void} options={filter.options as any} />
+              <Select value={filter.value} onChange={filter.onChange} options={filter.options} />
             </div>
           ))}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {hasPermission('BACKUPS', 'create') && (
+            {hasPermission('backups:create') && (
               <Button
                 onClick={() => {
                   resetForm()
@@ -450,7 +452,7 @@ export default function BackupsPage() {
             >
               Ver Calendario
             </Button>
-            {hasPermission('BACKUPS', 'export') && (
+            {hasPermission('backups:export') && (
               <>
                 <Button
                   variant="ghost"
@@ -531,10 +533,10 @@ export default function BackupsPage() {
                       {new Date(backup.createdAt).toLocaleDateString('es-ES')}
                     </td>
                     <td className="p-3 flex gap-2">
-                      {hasPermission('BACKUPS', 'update') && (
+                      {hasPermission('backups:update') && (
                         <Button onClick={() => handleEdit(backup)} variant="ghost" small>Editar</Button>
                       )}
-                      {hasPermission('BACKUPS', 'delete') && (
+                      {hasPermission('backups:delete') && (
                         <Button onClick={() => setDeleteConfirm({ isOpen: true, backup })} small>Eliminar</Button>
                       )}
                     </td>
@@ -564,10 +566,10 @@ export default function BackupsPage() {
                   {backup.sizeBytes && <div>Tamaño: {formatGigabytes(backup.sizeBytes)}</div>}
                 </div>
                 <div className="flex gap-2 mt-3">
-                  {hasPermission('BACKUPS', 'update') && (
+                  {hasPermission('backups:update') && (
                     <Button onClick={() => handleEdit(backup)} variant="ghost" small>Editar</Button>
                   )}
-                  {hasPermission('BACKUPS', 'delete') && (
+                  {hasPermission('backups:delete') && (
                     <Button onClick={() => setDeleteConfirm({ isOpen: true, backup })} small>Eliminar</Button>
                   )}
                 </div>
@@ -606,14 +608,14 @@ export default function BackupsPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Disco Utilizado *
               </label>
-              <Select value={formData.diskUsed} onChange={(v) => setFormData({ ...formData, diskUsed: v })} options={DISK_OPTIONS as any} />
+              <Select value={formData.diskUsed} onChange={(v) => setFormData({ ...formData, diskUsed: v })} options={DISK_OPTIONS} />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Estado *
               </label>
-              <Select value={formData.status} onChange={(v) => setFormData({ ...formData, status: v })} options={STATUS_OPTIONS as any} />
+              <Select value={formData.status} onChange={(v) => setFormData({ ...formData, status: v })} options={STATUS_OPTIONS} />
             </div>
 
             <div>

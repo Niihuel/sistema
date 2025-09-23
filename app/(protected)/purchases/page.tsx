@@ -6,8 +6,9 @@ import ConfirmDialog from "@/components/confirm-dialog"
 import Button from "@/components/button"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import MobileTable from "@/components/mobile-table"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
+import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
 
 type Purchase = {
   id: number
@@ -49,7 +50,7 @@ const getStatusLabel = (status: string) => {
 }
 
 export default function PurchasesPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const { showPermissionError } = usePermissionToast()
   const [items, setItems] = useState<Purchase[]>([])
   const [status, setStatus] = useState<string | "">("")
@@ -76,6 +77,19 @@ export default function PurchasesPage() {
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-white/60">{authLoading ? 'Verificando permisos...' : 'Cargando...'}</div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder a las compras.</div>
+          </div>
         </div>
       </AnimatedContainer>
     )
@@ -364,4 +378,3 @@ export default function PurchasesPage() {
     </AnimatedContainer>
   )
 }
-

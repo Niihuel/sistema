@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, memo } from "react"
-import { useDebounce } from "use-debounce"
-import { useInventory } from "@/lib/hooks/use-api"
+import { useState, useEffect } from "react"
 import { useToast } from "@/lib/hooks/use-toast"
 import Modal from "@/components/modal"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
@@ -11,8 +9,7 @@ import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
-import { useToast } from "@/lib/hooks/use-toast"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 
 type Employee = { id: number; firstName: string; lastName: string }
 
@@ -28,6 +25,7 @@ interface InventoryItem {
   status: string
   condition: string
   notes?: string
+  isPersonalProperty?: boolean
   assignedTo?: {
     id: number
     firstName: string
@@ -37,7 +35,9 @@ interface InventoryItem {
   updatedAt: string
 }
 
-const CATEGORIES = [
+type SelectOption = { value: string; label: string }
+
+const CATEGORIES: SelectOption[] = [
   { value: 'KEYBOARD', label: 'Teclados' },
   { value: 'MOUSE', label: 'Mouse' },
   { value: 'CABLE', label: 'Cables' },
@@ -46,7 +46,7 @@ const CATEGORIES = [
   { value: 'OTHER', label: 'Otros' }
 ]
 
-const STATUS_OPTIONS = [
+const STATUS_OPTIONS: SelectOption[] = [
   { value: 'AVAILABLE', label: 'Disponible' },
   { value: 'ASSIGNED', label: 'Asignado' },
   { value: 'STORAGE', label: 'En Almacenamiento' },
@@ -54,7 +54,7 @@ const STATUS_OPTIONS = [
   { value: 'RETIRED', label: 'Retirado' }
 ]
 
-const CONDITION_OPTIONS = [
+const CONDITION_OPTIONS: SelectOption[] = [
   { value: 'NEW', label: 'Nuevo' },
   { value: 'USED', label: 'Usado' },
   { value: 'REFURBISHED', label: 'Reacondicionado' },
@@ -62,7 +62,7 @@ const CONDITION_OPTIONS = [
 ]
 
 export default function InventoryPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const [items, setItems] = useState<InventoryItem[]>([])
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,7 +79,7 @@ export default function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("")
 
-  const [formData, setFormData] = useState({
+const [formData, setFormData] = useState({
     name: "",
     category: "KEYBOARD",
     brand: "",
@@ -97,6 +97,13 @@ export default function InventoryPage() {
     open: boolean
     item: typeof formData | null
   }>({ open: false, item: null })
+
+  type FilterOption = {
+    label: string
+    value: string
+    onChange: (value: string) => void
+    options: SelectOption[]
+  }
 
   useEffect(() => {
     fetchItems()
@@ -216,7 +223,7 @@ export default function InventoryPage() {
       condition: item.condition,
       notes: item.notes || "",
       assignedToId: item.assignedTo?.id.toString() || "",
-      isPersonalProperty: (item as any).isPersonalProperty || false
+      isPersonalProperty: item.isPersonalProperty ?? false
     })
     setIsModalOpen(true)
   }
@@ -406,7 +413,11 @@ export default function InventoryPage() {
       })
 
       const result = await exportToProfessionalExcel(exportOptions)
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError('Error al exportar a Excel')
     }
@@ -442,17 +453,21 @@ export default function InventoryPage() {
       })
 
       const result = await exportToProfessionalPDF(exportOptions)
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError('Error al exportar a PDF')
     }
   }
 
-  const filterOptions = [
+  const filterOptions: FilterOption[] = [
     {
       label: 'Estado',
       value: statusFilter,
-      onChange: setStatusFilter,
+      onChange: (value: string) => setStatusFilter(value),
       options: [
         { value: '', label: 'Todos los estados' },
         ...STATUS_OPTIONS
@@ -461,7 +476,7 @@ export default function InventoryPage() {
     {
       label: 'Categoría',
       value: categoryFilter,
-      onChange: setCategoryFilter,
+      onChange: (value: string) => setCategoryFilter(value),
       options: [
         { value: '', label: 'Todas las categorías' },
         ...CATEGORIES
@@ -474,6 +489,19 @@ export default function InventoryPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-white/60">{authLoading ? 'Verificando permisos...' : 'Cargando inventario...'}</div>
       </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="space-y-6 text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder al inventario.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
     )
   }
 
@@ -518,7 +546,7 @@ export default function InventoryPage() {
           {filterOptions.map((filter, index) => (
             <div key={index} className="w-full sm:w-auto min-w-[180px]">
               <label className="block text-sm font-medium text-white/70 mb-1">{filter.label}</label>
-              <Select value={filter.value} onChange={filter.onChange as (v: string)=>void} options={filter.options as any} />
+              <Select value={filter.value} onChange={filter.onChange} options={filter.options} />
             </div>
           ))}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -682,7 +710,7 @@ export default function InventoryPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Categoría *
               </label>
-              <Select value={formData.category} onChange={(v) => setFormData({ ...formData, category: v })} options={CATEGORIES as any} />
+              <Select value={formData.category} onChange={(v) => setFormData({ ...formData, category: v })} options={CATEGORIES} />
             </div>
 
             <div>
@@ -756,9 +784,9 @@ export default function InventoryPage() {
                 Estado *
               </label>
               <Select 
-                value={formData.status} 
-                onChange={(v) => setFormData({ ...formData, status: v })} 
-                options={STATUS_OPTIONS as any}
+                  value={formData.status}
+                  onChange={(v) => setFormData({ ...formData, status: v })}
+                  options={STATUS_OPTIONS}
                 disabled={formData.isPersonalProperty}
               />
               {formData.isPersonalProperty && (
@@ -772,14 +800,14 @@ export default function InventoryPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Condición *
               </label>
-              <Select value={formData.condition} onChange={(v) => setFormData({ ...formData, condition: v })} options={CONDITION_OPTIONS as any} />
+              <Select value={formData.condition} onChange={(v) => setFormData({ ...formData, condition: v })} options={CONDITION_OPTIONS} />
             </div>
             <div>
               <label className="block text-sm font-medium text-white/80 mb-1">Asignado a</label>
               <SearchableSelect 
                 value={formData.assignedToId} 
                 onChange={(v) => setFormData({ ...formData, assignedToId: v })} 
-                options={[{ value: "", label: "Sin asignar" }, ...employees.map(e => ({ value: String(e.id), label: `${e.firstName} ${e.lastName}` }))] as any}
+                options={[{ value: "", label: "Sin asignar" }, ...employees.map(e => ({ value: String(e.id), label: `${e.firstName} ${e.lastName}` }))]}
                 searchPlaceholder="Buscar empleado..."
               />
             </div>
@@ -936,7 +964,6 @@ export default function InventoryPage() {
         onCancel={() => setDivideConfirm({ open: false, item: null })}
       />
 
-      )}
     </AnimatedContainer>
   )
 }

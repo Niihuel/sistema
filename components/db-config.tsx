@@ -23,8 +23,8 @@ interface DatabaseConfigProps {
 
 export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Configuración de Base de Datos" }: DatabaseConfigProps) {
   const [config, setConfig] = useState<DatabaseConfig>({
-    host: "192.168.0.219",
-    port: "1433",
+    host: "192.168.143.163",
+    port: "1435",
     database: "sistemas",
     username: "adm",
     password: "123456",
@@ -115,7 +115,7 @@ export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Confi
                   value={config.host}
                   onChange={(e) => setConfig({ ...config, host: e.target.value })}
                   className="w-full px-3 py-2 rounded-md bg-black/30 border border-white/10 text-white text-sm placeholder-white/40 focus:outline-none"
-                  placeholder="192.168.0.219"
+                  placeholder="192.168.143.163"
                 />
               </div>
               
@@ -128,7 +128,7 @@ export default function DatabaseConfig({ isOpen, onClose, onSave, title = "Confi
                   value={config.port}
                   onChange={(e) => setConfig({ ...config, port: e.target.value })}
                   className="w-full px-3 py-2 rounded-md bg-black/30 border border-white/10 text-white text-sm placeholder-white/40 focus:outline-none"
-                  placeholder="1433"
+                  placeholder="1435"
                 />
               </div>
             </div>

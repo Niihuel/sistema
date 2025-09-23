@@ -9,7 +9,8 @@ import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
 import { validateForm, ValidationRule } from "@/lib/validation"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import PermissionGuard from "@/components/PermissionGuard"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
 
 interface Employee {
@@ -85,7 +86,7 @@ interface EmailAccount {
 }
 
 export default function UsersPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const { showSuccess, showError, showWarning } = useToast()
   const [activeTab, setActiveTab] = useState('windows')
   const [windowsAccounts, setWindowsAccounts] = useState<WindowsAccount[]>([])
@@ -512,7 +513,11 @@ export default function UsersPage() {
         ? await exportToProfessionalExcel(exportOptions)
         : await exportToProfessionalPDF(exportOptions)
         
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError(`Error al exportar ${format.toUpperCase()}`)
     }
@@ -579,7 +584,11 @@ export default function UsersPage() {
         ? await exportToProfessionalExcel(exportOptions)
         : await exportToProfessionalPDF(exportOptions)
         
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError(`Error al exportar reporte completo ${format.toUpperCase()}`)
     }
@@ -596,6 +605,17 @@ export default function UsersPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-white/60">{authLoading ? 'Verificando permisos...' : 'Cargando cuentas de usuario...'}</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+          <div className="text-white/60">Debes iniciar sesión para gestionar usuarios.</div>
+        </div>
       </div>
     )
   }
@@ -1352,10 +1372,6 @@ export default function UsersPage() {
         cancelText="Cancelar"
       />
 
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-      />
     </AnimatedContainer>
   )
 }

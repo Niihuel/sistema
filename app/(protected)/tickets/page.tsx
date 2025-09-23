@@ -11,8 +11,9 @@ import SearchableSelect from "@/components/searchable-select"
 import { validateForm, ValidationRule } from "@/lib/validation"
 import { AREA_OPTIONS } from "@/lib/constants/areas"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
+import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
 
 type Ticket = {
   id: number
@@ -58,7 +59,7 @@ const getPriorityColor = (priority: string) => {
 }
 
 export default function TicketsPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const { showPermissionError } = usePermissionToast()
   const [items, setItems] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(false)
@@ -94,6 +95,19 @@ export default function TicketsPage() {
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-white/60">Verificando autenticación...</div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white p-4 sm:p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para gestionar tickets.</div>
+          </div>
         </div>
       </AnimatedContainer>
     )
@@ -210,10 +224,7 @@ export default function TicketsPage() {
       
       setStatusChangeTicket(null)
       setStatusChangeForm({ status: "", solution: "", resolutionTime: "" })
-      setNotification({ 
-        type: 'success', 
-        message: `Solicitud ${statusChangeForm.status === 'Resuelto' ? 'resuelta' : 'cerrada'} correctamente` 
-      })
+      showSuccess(`Solicitud ${statusChangeForm.status === 'Resuelto' ? 'resuelta' : 'cerrada'} correctamente`)
       await load()
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error inesperado"
@@ -261,22 +272,13 @@ export default function TicketsPage() {
       const result = await exportToProfessionalExcel(exportOptions)
       
       if (result.success) {
-        setNotification({ 
-          type: 'success', 
-          message: result.message
-        })
+        showSuccess(result.message)
       } else {
-        setNotification({ 
-          type: 'error', 
-          message: result.message
-        })
+        showError(result.message)
       }
     } catch (error) {
       console.error('Error exporting to Excel:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error inesperado al exportar a Excel. Por favor, intenta nuevamente.'
-      })
+      showError('Error inesperado al exportar a Excel. Por favor, intenta nuevamente.')
     }
   }
 
@@ -312,22 +314,13 @@ export default function TicketsPage() {
       const result = await exportToProfessionalPDF(exportOptions)
       
       if (result.success) {
-        setNotification({ 
-          type: 'success', 
-          message: result.message
-        })
+        showSuccess(result.message)
       } else {
-        setNotification({ 
-          type: 'error', 
-          message: result.message
-        })
+        showError(result.message)
       }
     } catch (error) {
       console.error('Error exporting to PDF:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error inesperado al exportar a PDF. Por favor, intenta nuevamente.'
-      })
+      showError('Error inesperado al exportar a PDF. Por favor, intenta nuevamente.')
     }
   }
 
@@ -775,10 +768,6 @@ export default function TicketsPage() {
         </div>
       </Modal>
 
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-      />
 
       <ConfirmDialog
         open={deleteId !== null}

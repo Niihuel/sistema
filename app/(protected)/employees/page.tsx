@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useCallback, memo } from "react"
+import { useMemo, useState, useCallback } from "react"
 import { useDebounce } from "use-debounce"
 import { useEmployees } from "@/lib/hooks/use-api"
 import { useToast } from "@/lib/hooks/use-toast"
@@ -12,7 +12,7 @@ import MobileTable from "@/components/mobile-table"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 
 type Employee = {
   id: number
@@ -30,7 +30,7 @@ import { FIXED_AREAS } from "@/lib/constants/areas"
 const statusOptions = ["Activo", "Inactivo"]
 
 function EmployeesPage() {
-  const { user, loading: authLoading, can } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const { showError, showSuccess } = useToast()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -92,7 +92,11 @@ function EmployeesPage() {
       })
 
       const result = await exportToProfessionalExcel(exportOptions)
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError('Error al exportar a Excel')
     }
@@ -124,7 +128,11 @@ function EmployeesPage() {
       })
 
       const result = await exportToProfessionalPDF(exportOptions)
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError('Error al exportar a PDF')
     }
@@ -233,6 +241,19 @@ function EmployeesPage() {
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-white/60">{authLoading ? 'Verificando permisos...' : 'Cargando...'}</div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para gestionar empleados.</div>
+          </div>
         </div>
       </AnimatedContainer>
     )
@@ -413,4 +434,3 @@ function EmployeesPage() {
 }
 
 export default memo(EmployeesPage)
-

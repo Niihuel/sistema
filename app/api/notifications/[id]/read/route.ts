@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { withDatabase } from "@/lib/prisma"
 import { requireAuth } from "@/lib/middleware"
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const ctx = requireAuth(req)
     const notificationId = Number(params.id)

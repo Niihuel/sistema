@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
 
 const getStatusColorForChart = (statusName: string) => {
@@ -56,8 +56,8 @@ const normalizeStatusText = (statusName: string) => {
 
 export default function DashboardPage() {
   console.log('[Dashboard] Component rendered')
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
-  console.log('[Dashboard] Auth state:', { user: !!user, userRole: user?.role, authLoading })
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
+  console.log('[Dashboard] Auth state:', { isAuthenticated, authLoading })
   const [data, setData] = useState<{
     openTickets: number
     totalEquipment: number
@@ -102,7 +102,7 @@ export default function DashboardPage() {
     if (!authLoading) {
       load()
     }
-  }, [authLoading]) 
+  }, [authLoading, showError])
 
 
   if (authLoading) {
@@ -117,9 +117,22 @@ export default function DashboardPage() {
     )
   }
 
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white p-4 sm:p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder al dashboard.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
   // Check if user has permission to access dashboard
   const canAccess = can('dashboard:view')
-  console.log('[Dashboard] Permission check result:', { canAccess, userRole: user?.role })
+  console.log('[Dashboard] Permission check result:', { canAccess, isAuthenticated })
 
   if (!canAccess) {
     console.log('[Dashboard] Access denied - showing access denied message')

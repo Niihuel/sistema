@@ -4,11 +4,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   return withAuth(async (req, authContext) => {
     try {
-      const { id } = await params
+      const { id } = await context.params
       const userId = parseInt(id, 10)
 
       if (isNaN(userId)) {

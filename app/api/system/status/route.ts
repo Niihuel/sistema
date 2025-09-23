@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
       network: {
         host: process.env.HOSTNAME || 'localhost',
         port: process.env.PORT || '4250',
-        ip: '192.168.0.219'
+        ip: '192.168.143.163'
       }
     };
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       network: {
         host: process.env.HOSTNAME || 'localhost',
         port: process.env.PORT || '4250',
-        ip: '192.168.0.219'
+        ip: '192.168.143.163'
       }
     }, { 
       status: 200, // Devolvemos 200 porque el servidor funciona, solo la BD puede fallar

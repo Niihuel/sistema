@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
+import PermissionGuard from "@/components/PermissionGuard"
 import Modal from "@/components/modal"
 import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
 import { validateForm, ValidationRule } from "@/lib/validation"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
+import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
 
 interface Printer {
   id: number
@@ -32,45 +34,8 @@ const STATUS_OPTIONS = [
 import { AREA_OPTIONS } from "@/lib/constants/areas"
 
 export default function PrintersPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
-  const { showPermissionError, showAdminOnlyError } = usePermissionToast()
-  
-  // Check permissions first
-  if (authLoading) {
-    return (
-      <AnimatedContainer className="text-white px-2 sm:px-0">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-white/60">Cargando impresoras...</div>
-        </div>
-      </AnimatedContainer>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <AnimatedContainer className="text-white px-2 sm:px-0">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
-            <div className="text-white/60">Debes iniciar sesión para acceder a esta página.</div>
-          </div>
-        </div>
-      </AnimatedContainer>
-    )
-  }
-
-  if (!can('printers:view')) {
-    return (
-      <AnimatedContainer className="text-white px-2 sm:px-0">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
-            <div className="text-white/60">No tienes permisos para acceder a la gestión de impresoras.</div>
-          </div>
-        </div>
-      </AnimatedContainer>
-    )
-  }
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
+  const { showPermissionError } = usePermissionToast()
   const [printers, setPrinters] = useState<Printer[]>([])
   const [filteredPrinters, setFilteredPrinters] = useState<Printer[]>([])
   const [loading, setLoading] = useState(true)
@@ -122,6 +87,42 @@ export default function PrintersPage() {
     setFilteredPrinters(filtered)
   }, [printers, searchTerm, statusFilter, areaFilter])
 
+  if (authLoading) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-white/60">Cargando impresoras...</div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder a esta página.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!can('printers:view')) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">No tienes permisos para acceder a la gestión de impresoras.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
   const fetchPrinters = async () => {
     try {
       const response = await fetch('/api/printers')
@@ -152,12 +153,12 @@ export default function PrintersPage() {
     // Check permissions before saving
     if (editingPrinter) {
       if (!can('printers:edit')) {
-        showError('No tienes permisos para editar impresoras')
+        showPermissionError('No tienes permisos para editar impresoras')
         return
       }
     } else {
       if (!can('printers:create')) {
-        showError('No tienes permisos para crear impresoras')
+        showPermissionError('No tienes permisos para crear impresoras')
         return
       }
     }
@@ -556,10 +557,6 @@ export default function PrintersPage() {
         cancelText="Cancelar"
       />
 
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-      />
     </AnimatedContainer>
   )
 }

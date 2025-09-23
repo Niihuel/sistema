@@ -10,7 +10,7 @@ import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
 import { validateForm, ValidationRule } from "@/lib/validation"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
 
 type Equipment = {
@@ -111,44 +111,8 @@ const OPERATING_SYSTEMS = [
 const storageTypes = ["SSD", "HDD", "N/A"]
 
 export default function EquipmentPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
-  
-  // Check permissions first
-  if (authLoading) {
-    return (
-      <AnimatedContainer className="text-white px-2 sm:px-0">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-white/60">Cargando equipos...</div>
-        </div>
-      </AnimatedContainer>
-    )
-  }
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
 
-  if (!isAuthenticated) {
-    return (
-      <AnimatedContainer className="text-white px-2 sm:px-0">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
-            <div className="text-white/60">Debes iniciar sesión para acceder a esta página.</div>
-          </div>
-        </div>
-      </AnimatedContainer>
-    )
-  }
-
-  if (!can('equipment:view')) {
-    return (
-      <AnimatedContainer className="text-white px-2 sm:px-0">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
-            <div className="text-white/60">No tienes permisos para acceder a la gestión de equipos.</div>
-          </div>
-        </div>
-      </AnimatedContainer>
-    )
-  }
   const [items, setItems] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -163,7 +127,6 @@ export default function EquipmentPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [viewItem, setViewItem] = useState<Equipment | null>(null)
-  // Toast notifications
   const { showSuccess, showError } = useToast()
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
@@ -200,7 +163,11 @@ export default function EquipmentPage() {
       })
 
       const result = await exportToProfessionalExcel(exportOptions)
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError('Error al exportar a Excel')
     }
@@ -232,7 +199,11 @@ export default function EquipmentPage() {
       })
 
       const result = await exportToProfessionalPDF(exportOptions)
-      result.success ? showSuccess(result.message) : showError(result.message)
+      if (result.success) {
+        showSuccess(result.message)
+      } else {
+        showError(result.message)
+      }
     } catch (error) {
       showError('Error al exportar a PDF')
     }
@@ -268,6 +239,43 @@ export default function EquipmentPage() {
     void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Check permissions first
+  if (authLoading) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-white/60">Cargando equipos...</div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder a esta página.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!can('equipment:view')) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
+            <div className="text-white/60">No tienes permisos para acceder a la gestión de equipos.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
 
   function openCreate() {
     setEditing(null)
@@ -924,4 +932,3 @@ export default function EquipmentPage() {
     </AnimatedContainer>
   )
 }
-

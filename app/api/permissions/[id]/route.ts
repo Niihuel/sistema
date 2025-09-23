@@ -2,12 +2,12 @@ import { NextRequest } from "next/server"
 import { withDatabase } from "@/lib/prisma"
 import { requireAuth, requireRole } from "@/lib/middleware"
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const ctx = requireAuth(req)
     requireRole(ctx, ["ADMIN"]) // Solo admin puede eliminar permisos
-    
-    const permissionId = Number(params.id)
+    const { id } = await context.params
+    const permissionId = Number(id)
     
     if (isNaN(permissionId)) {
       return Response.json({ error: "ID de permiso inválido" }, { status: 400 })
@@ -37,12 +37,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const ctx = requireAuth(req)
     requireRole(ctx, ["ADMIN"]) // Solo admin puede ver permisos específicos
-    
-    const permissionId = Number(params.id)
+    const { id } = await context.params
+    const permissionId = Number(id)
     
     if (isNaN(permissionId)) {
       return Response.json({ error: "ID de permiso inválido" }, { status: 400 })

@@ -8,8 +8,9 @@ import ConfirmDialog from "@/components/confirm-dialog"
 import Select from "@/components/select"
 import SearchableSelect from "@/components/searchable-select"
 import { exportToProfessionalExcel, exportToProfessionalPDF, prepareDataForExport } from "@/lib/professional-export"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
+import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
 
 interface Employee {
   id: number
@@ -66,7 +67,7 @@ const STATUS_OPTIONS = [
 ]
 
 export default function PurchaseRequestsPage() {
-  const { user, loading: authLoading, can, hasRole } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const { showPermissionError } = usePermissionToast()
   const [requests, setRequests] = useState<PurchaseRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PurchaseRequest[]>([])
@@ -188,23 +189,14 @@ export default function PurchaseRequestsPage() {
         await fetchData()
         resetForm()
         setIsModalOpen(false)
-        setNotification({ 
-          type: 'success', 
-          message: editingRequest ? 'Solicitud actualizada correctamente' : 'Solicitud creada correctamente' 
-        })
+        showSuccess(editingRequest ? 'Solicitud actualizada correctamente' : 'Solicitud creada correctamente')
       } else {
         const errorData = await response.json()
-        setNotification({ 
-          type: 'error', 
-          message: errorData.error || 'Error al guardar la solicitud de compra' 
-        })
+        showError(errorData.error || 'Error al guardar la solicitud de compra')
       }
     } catch (error) {
       console.error('Error saving purchase request:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error de conexión. Por favor, intenta nuevamente.' 
-      })
+      showError('Error de conexión. Por favor, intenta nuevamente.')
     }
   }
 
@@ -253,23 +245,14 @@ export default function PurchaseRequestsPage() {
       if (response.ok) {
         await fetchData()
         setDeleteConfirm({ isOpen: false, request: null })
-        setNotification({ 
-          type: 'success', 
-          message: 'Solicitud eliminada correctamente' 
-        })
+        showSuccess('Solicitud eliminada correctamente')
       } else {
         const errorData = await response.json()
-        setNotification({ 
-          type: 'error', 
-          message: errorData.error || 'Error al eliminar la solicitud' 
-        })
+        showError(errorData.error || 'Error al eliminar la solicitud')
       }
     } catch (error) {
       console.error('Error deleting purchase request:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error de conexión. Por favor, intenta nuevamente.' 
-      })
+      showError('Error de conexión. Por favor, intenta nuevamente.')
     }
   }
 
@@ -341,22 +324,13 @@ export default function PurchaseRequestsPage() {
       const result = await exportToProfessionalExcel(exportOptions)
       
       if (result.success) {
-        setNotification({ 
-          type: 'success', 
-          message: result.message
-        })
+        showSuccess(result.message)
       } else {
-        setNotification({ 
-          type: 'error', 
-          message: result.message
-        })
+        showError(result.message)
       }
     } catch (error) {
       console.error('Error exporting to Excel:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error inesperado al exportar a Excel. Por favor, intenta nuevamente.'
-      })
+      showError('Error inesperado al exportar a Excel. Por favor, intenta nuevamente.')
     }
   }
 
@@ -394,22 +368,13 @@ export default function PurchaseRequestsPage() {
       const result = await exportToProfessionalPDF(exportOptions)
       
       if (result.success) {
-        setNotification({ 
-          type: 'success', 
-          message: result.message
-        })
+        showSuccess(result.message)
       } else {
-        setNotification({ 
-          type: 'error', 
-          message: result.message
-        })
+        showError(result.message)
       }
     } catch (error) {
       console.error('Error exporting to PDF:', error)
-      setNotification({ 
-        type: 'error', 
-        message: 'Error inesperado al exportar a PDF. Por favor, intenta nuevamente.'
-      })
+      showError('Error inesperado al exportar a PDF. Por favor, intenta nuevamente.')
     }
   }
 
@@ -456,6 +421,19 @@ export default function PurchaseRequestsPage() {
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-white/60">Verificando autenticación...</div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white p-4 sm:p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder a las solicitudes de compra.</div>
+          </div>
         </div>
       </AnimatedContainer>
     )
@@ -957,10 +935,6 @@ export default function PurchaseRequestsPage() {
         cancelText="Cancelar"
       />
 
-        type={notification?.type || 'info'}
-        message={notification?.message || ''}
-        isVisible={!!notification}
-      />
       </div>
     </AnimatedContainer>
   )

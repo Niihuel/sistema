@@ -19,11 +19,12 @@ const updateRoleSchema = z.object({
 // GET /api/roles-v2/[id] - Get role details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const ctx = requireAuth(req)
-    const roleId = parseInt(params.id)
+    const { id } = await context.params
+    const roleId = parseInt(id)
 
     if (isNaN(roleId)) {
       return NextResponse.json(
@@ -80,7 +81,7 @@ export async function GET(
   } catch (error) {
     logger.error('Error fetching role', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      path: `/api/roles-v2/${params.id}`
+      path: `/api/roles-v2/${id}`
     })
 
     if (error instanceof Error && error.message === 'Insufficient permissions') {
@@ -100,11 +101,12 @@ export async function GET(
 // PUT /api/roles-v2/[id] - Update role
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const ctx = requireAuth(req)
-    const roleId = parseInt(params.id)
+    const { id } = await context.params
+    const roleId = parseInt(id)
     const body = await req.json()
 
     if (isNaN(roleId)) {
@@ -137,7 +139,7 @@ export async function PUT(
 
     logger.info('Updated role', {
       userId: ctx.userId,
-      path: `/api/roles-v2/${params.id}`,
+      path: `/api/roles-v2/${id}`,
       metadata: { roleId: role.id, changes: Object.keys(validated) }
     })
 
@@ -148,7 +150,7 @@ export async function PUT(
   } catch (error) {
     logger.error('Error updating role', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      path: `/api/roles-v2/${params.id}`
+      path: `/api/roles-v2/${id}`
     })
 
     if (error instanceof z.ZodError) {
@@ -177,11 +179,12 @@ export async function PUT(
 // DELETE /api/roles-v2/[id] - Delete role
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const ctx = requireAuth(req)
-    const roleId = parseInt(params.id)
+    const { id } = await context.params
+    const roleId = parseInt(id)
 
     if (isNaN(roleId)) {
       return NextResponse.json(
@@ -210,7 +213,7 @@ export async function DELETE(
 
     logger.info('Deleted role', {
       userId: ctx.userId,
-      path: `/api/roles-v2/${params.id}`,
+      path: `/api/roles-v2/${id}`,
       metadata: { roleId }
     })
 
@@ -221,7 +224,7 @@ export async function DELETE(
   } catch (error) {
     logger.error('Error deleting role', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      path: `/api/roles-v2/${params.id}`
+      path: `/api/roles-v2/${id}`
     })
 
     if (error instanceof Error &&

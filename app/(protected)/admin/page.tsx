@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
 import Button from "@/components/button"
 import Modal from "@/components/modal"
@@ -51,20 +51,16 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
-  
-  // Auth hooks
-  const permissions = usePermissionsV2()
-  const { hasPermission } = permissions
-  const authLoading = permissions.isLoading
+
+  const { isAuthenticated, loading: authLoading, can, hasRole } = useAppAuth()
 
   // Toast notifications
   const { showSuccess, showError, showWarning } = useToast()
   const showAdminOnlyError = (action: string) => showError(`No tienes permisos para ${action}`)
 
-  // Legacy compatibility
-  const currentUser = { id: 1, username: 'admin', role: 'ADMIN' }
-  const isAdmin = true
-  const isSuperAdmin = true
+  const isSuperAdmin = hasRole('SuperAdmin')
+  const isAdmin = hasRole('Admin')
+  const canAccessAdmin = can('admin:panel') || can('system:admin') || isSuperAdmin || isAdmin
 
   // Modal states
   const [isUserModalOpen, setIsUserModalOpen] = useState(false)
@@ -97,24 +93,22 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
-    // Don't do anything while auth is still loading
-    if (authLoading) {
+    if (authLoading) return
+
+    if (!isAuthenticated) {
+      setLoading(false)
+      showAdminOnlyError("acceder al panel de administración")
       return
     }
 
-    // Check if user has admin permissions
-    const canAccessAdmin = hasPermission('ADMIN_PANEL', 'read') || isAdmin || isSuperAdmin
-
-    if (currentUser && canAccessAdmin) {
-      fetchData()
-    } else if (currentUser && !canAccessAdmin) {
+    if (!canAccessAdmin) {
       showAdminOnlyError("acceder al panel de administración")
       setLoading(false)
-    } else if (!currentUser) {
-      // User is not authenticated, redirect will be handled by higher-level auth guard
-      setLoading(false)
+      return
     }
-  }, [currentUser, isAdmin, authLoading, showAdminOnlyError])
+
+    fetchData()
+  }, [authLoading, isAuthenticated, canAccessAdmin, showAdminOnlyError])
 
 
 
@@ -176,7 +170,7 @@ export default function AdminPage() {
     e.preventDefault()
 
     // Check if user can create users
-    if (!hasPermission('USERS', 'create') && !isSuperAdmin) {
+    if (!can('users:create') && !isSuperAdmin) {
       showError('No tienes permisos para crear usuarios')
       return
     }
@@ -208,7 +202,7 @@ export default function AdminPage() {
     e.preventDefault()
 
     // Check if user can create roles
-    if (!hasPermission('ROLES', 'create') && !isSuperAdmin) {
+    if (!can('roles:create') && !isSuperAdmin) {
       showError('No tienes permisos para crear roles')
       return
     }
@@ -240,7 +234,7 @@ export default function AdminPage() {
     if (!deleteConfirm.user) return
 
     // Check if user can delete users
-    if (!hasPermission('USERS', 'delete') && !isSuperAdmin) {
+    if (!can('users:delete') && !isSuperAdmin) {
       showError('No tienes permisos para eliminar usuarios')
       return
     }
@@ -267,7 +261,7 @@ export default function AdminPage() {
     if (!deleteConfirm.role) return
 
     // Check if user can delete roles
-    if (!hasPermission('ROLES', 'delete') && !isSuperAdmin) {
+    if (!can('roles:delete') && !isSuperAdmin) {
       showError('No tienes permisos para eliminar roles')
       return
     }
@@ -316,7 +310,7 @@ export default function AdminPage() {
     if (!selectedRole || !permissionFormData.resource) return
 
     // Check if user can manage permissions
-    if (!hasPermission('PERMISSIONS', 'create') && !isSuperAdmin) {
+    if (!can('permissions:create') && !isSuperAdmin) {
       showError('No tienes permisos para gestionar permisos')
       return
     }
@@ -355,7 +349,7 @@ export default function AdminPage() {
 
   const handleDeletePermission = async (permissionId: number) => {
     // Check if user can manage permissions
-    if (!hasPermission('PERMISSIONS', 'delete') && !isSuperAdmin) {
+    if (!can('permissions:delete') && !isSuperAdmin) {
       showError('No tienes permisos para eliminar permisos')
       return
     }
@@ -388,7 +382,7 @@ export default function AdminPage() {
   }
 
   // Show loading while checking authentication or loading data
-  if (loading || authLoading || !currentUser) {
+  if (authLoading || loading) {
     return (
       <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -398,8 +392,19 @@ export default function AdminPage() {
     )
   }
 
-  // Show access denied if not admin
-  const canAccessAdmin = hasPermission('ADMIN_PANEL', 'read') || isAdmin || isSuperAdmin
+  if (!isAuthenticated) {
+    return (
+      <AnimatedContainer className="text-white px-2 sm:px-0">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-400 text-xl mb-2">Acceso denegado</div>
+            <div className="text-white/60">Debes iniciar sesión para acceder al panel de administración.</div>
+          </div>
+        </div>
+      </AnimatedContainer>
+    )
+  }
+
   if (!canAccessAdmin) {
     return (
       <AnimatedContainer className="text-white px-2 sm:px-0">
@@ -424,15 +429,6 @@ export default function AdminPage() {
       <div className="mb-8 border-b border-white/10"></div>
 
 
-      {/* Debug Information */}
-      {currentUser && (
-        <FadeInUp delay={0.1}>
-          <div className="mb-4 text-blue-400 text-sm bg-blue-400/10 border border-blue-400/20 rounded-lg p-3">
-            <strong>Usuario actual:</strong> {currentUser.username} | <strong>Rol:</strong> {currentUser.role} | <strong>ID:</strong> {currentUser.id}
-          </div>
-        </FadeInUp>
-      )}
-
       {/* Quick Actions */}
       <FadeInUp delay={0.1}>
         <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -450,7 +446,7 @@ export default function AdminPage() {
                 setIsUserModalOpen(true)
               }}
               className="w-full"
-              disabled={!hasPermission('USERS', 'create') && !isSuperAdmin}
+              disabled={!can('users:create') && !isSuperAdmin}
             >
               Crear Nuevo Usuario
             </Button>
@@ -471,7 +467,7 @@ export default function AdminPage() {
               }}
               variant="ghost"
               className="w-full"
-              disabled={!hasPermission('ROLES', 'create') && !isSuperAdmin}
+              disabled={!can('roles:create') && !isSuperAdmin}
             >
               Crear Nuevo Rol
             </Button>
@@ -553,7 +549,7 @@ export default function AdminPage() {
                           })}
                           small
                           className="text-xs"
-                          disabled={!hasPermission('USERS', 'delete') && !isSuperAdmin}
+                          disabled={!can('users:delete') && !isSuperAdmin}
                         >
                           Eliminar
                         </Button>
@@ -593,7 +589,7 @@ export default function AdminPage() {
                       variant="ghost"
                       small
                       className="text-xs text-blue-400 hover:text-blue-300"
-                      disabled={!hasPermission('PERMISSIONS', 'read') && !isSuperAdmin}
+                      disabled={!can('permissions:view') && !isSuperAdmin}
                     >
                       Gestionar
                     </Button>
@@ -607,7 +603,7 @@ export default function AdminPage() {
                       variant="ghost"
                       small
                       className="text-xs text-red-400 hover:text-red-300"
-                      disabled={!hasPermission('ROLES', 'delete') && !isSuperAdmin}
+                      disabled={!can('roles:delete') && !isSuperAdmin}
                     >
                       Eliminar
                     </Button>

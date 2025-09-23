@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
-import { usePermissionsV2 } from "@/lib/hooks/usePermissionsV2"
+import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
 
 const getStatusColorForChart = (statusName: string) => {
@@ -55,7 +55,7 @@ const normalizeStatusText = (statusName: string) => {
 }
 
 export default function DashboardPage() {
-  const { user, loading: authLoading, can } = usePermissionsV2()
+  const { isAuthenticated, loading: authLoading, can } = useAppAuth()
   const [data, setData] = useState<{
     openTickets: number
     totalEquipment: number
@@ -103,7 +103,7 @@ export default function DashboardPage() {
   }
 
   // Check if user is authenticated
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <AnimatedContainer className="text-white p-4 sm:p-6">
         <div className="flex items-center justify-center min-h-[400px]">

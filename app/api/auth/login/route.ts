@@ -317,7 +317,7 @@ async function setAuthenticationCookie(token: string): Promise<void> {
       sameSite: 'lax', // Protección CSRF
       maxAge: SECURITY_CONFIG.sessionDurationMs / 1000, // En segundos
       path: '/', // Disponible en toda la app
-      domain: process.env.NODE_ENV === 'production' ? '.192.168.0.219' : undefined, // Tu IP
+      domain: process.env.NODE_ENV === 'production' ? '.192.168.143.163' : undefined, // Tu IP
     });
   } catch (error) {
     console.error('Error configurando cookie de auth:', error);
@@ -526,7 +526,7 @@ export async function OPTIONS(req: NextRequest) {
   return NextResponse.json({}, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': 'http://192.168.0.219:4250', // Tu IP fija
+      'Access-Control-Allow-Origin': 'http://192.168.143.163:4250', // Tu IP fija
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Credentials': 'true',

@@ -22,7 +22,7 @@ const getNetworkConfig = (): NetworkConfig => {
   if (isDevelopment) {
     const currentHost = typeof window !== 'undefined' 
       ? `${window.location.protocol}//${window.location.hostname}:4250`
-      : 'http://192.168.0.219:4250'
+      : 'http://192.168.143.163:4250'
     
     return {
       baseURL: currentHost,
@@ -33,8 +33,8 @@ const getNetworkConfig = (): NetworkConfig => {
   }
 
   // Production configuration
-  // Using company's fixed IP: 192.168.0.219
-  const productionHost = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.0.219:4250'
+  // Using company's fixed IP: 192.168.143.163
+  const productionHost = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.143.163:4250'
   
   return {
     baseURL: productionHost,
@@ -78,16 +78,16 @@ export const getAPIEndpoint = (path: string = '') => {
 export const ENV_CONFIG = {
   // Development con IP fija
   LOCAL_DEV: {
-    WEB_URL: 'http://192.168.0.219:4250',
-    API_URL: 'http://192.168.0.219:4250/api',
-    MOBILE_DEV_URL: 'http://192.168.0.219:4250',
+    WEB_URL: 'http://192.168.143.163:4250',
+    API_URL: 'http://192.168.143.163:4250/api',
+    MOBILE_DEV_URL: 'http://192.168.143.163:4250',
   },
   
   // Production with fixed IP
   PRODUCTION: {
-    WEB_URL: 'http://192.168.0.219:4250',
-    API_URL: 'http://192.168.0.219:4250/api',
-    FIXED_IP: '192.168.0.219',
+    WEB_URL: 'http://192.168.143.163:4250',
+    API_URL: 'http://192.168.143.163:4250/api',
+    FIXED_IP: '192.168.143.163',
   }
 }
 

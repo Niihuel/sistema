@@ -5,10 +5,10 @@ const prisma = new PrismaClient()
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: idParam } = await params
+    const { id: idParam } = await context.params
     const id = parseInt(idParam)
     const data = await request.json()
 
@@ -57,10 +57,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: idParam } = await params
+    const { id: idParam } = await context.params
     const id = parseInt(idParam)
 
     await prisma.purchaseRequest.delete({

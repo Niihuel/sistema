@@ -12,15 +12,15 @@ const nextConfig = {
   compress: true,
   generateEtags: true,
   images: {
-    domains: ['localhost', '192.168.0.219'],
+    domains: ['localhost', '192.168.143.163'],
     unoptimized: process.env.NODE_ENV !== 'production',
     formats: ['image/avif', 'image/webp'],
   },
   env: {
     CUSTOM_KEY: 'sistema-it',
     NEXT_PUBLIC_API_URL: process.env.NODE_ENV === 'production'
-      ? 'http://192.168.0.219:4250'
-      : 'http://192.168.0.219:4250'
+      ? 'http://192.168.143.163:4250'
+      : 'http://192.168.143.163:4250'
   },
 
   webpack: (config, { isServer, dev }) => {
@@ -104,7 +104,7 @@ const nextConfig = {
           {
             key: 'Access-Control-Allow-Origin',
             value: process.env.NODE_ENV === 'production'
-              ? 'http://192.168.0.219:4250'
+              ? 'http://192.168.143.163:4250'
               : '*',
           },
           {
