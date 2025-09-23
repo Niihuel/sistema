@@ -21,7 +21,7 @@ const createRoleSchema = z.object({
 // GET /api/roles-v2 - Get role hierarchy
 export async function GET(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
 
     const roles = await withDatabase(async (prisma) => {
       const service = new RoleManagementService(prisma)
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
 // POST /api/roles-v2 - Create new role
 export async function POST(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const body = await req.json()
 
     // Validate input

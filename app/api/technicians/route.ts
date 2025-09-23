@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/middleware"
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     
     const technicians = await withDatabase(async (prisma) => {
       // Obtener usuarios con rol TECHNICIAN o ADMIN (pueden ser asignados como técnicos)
@@ -77,3 +77,4 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Error obteniendo técnicos" }, { status: 500 })
   }
 }
+

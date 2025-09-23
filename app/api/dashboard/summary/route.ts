@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     // Verificar autenticación
     try {
-      requireAuth(req)
+      await requireAuth(req)
     } catch (authError) {
       // En desarrollo, continuamos sin auth para demos
       if (process.env.NODE_ENV === "production") {
@@ -87,5 +87,6 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Error en dashboard" }, { status: 500 })
   }
 }
+
 
 

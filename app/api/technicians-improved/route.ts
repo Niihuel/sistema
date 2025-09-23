@@ -9,7 +9,7 @@ import { requireAuth } from "@/lib/middleware"
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     
     const technicians = await withDatabase(async (prisma) => {
       // Get users with technician roles that have associated employees
@@ -55,3 +55,4 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Error obteniendo técnicos" }, { status: 500 })
   }
 }
+

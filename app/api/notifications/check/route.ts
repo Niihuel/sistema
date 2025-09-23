@@ -12,7 +12,7 @@ import { getNotificationTriggers } from "@/lib/notification-triggers"
 
 export async function PUT(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     requireRole(ctx, ["ADMIN"]) // Only admins can trigger manual checks
     
     console.log(`🔄 Manual notification check triggered by user ${ctx.userId}`)
@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     requireRole(ctx, ["ADMIN"]) // Only admins can create test notifications
     
     const { type = 'test', createSample = false } = await req.json()
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     requireRole(ctx, ["ADMIN"])
     
     // Get notification system status
@@ -179,3 +179,4 @@ export async function GET(req: NextRequest) {
     return Response.json({ error: "Error obteniendo estadísticas" }, { status: 500 })
   }
 }
+

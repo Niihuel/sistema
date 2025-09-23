@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/middleware"
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const notificationId = Number(params.id)
     
     if (isNaN(notificationId)) {

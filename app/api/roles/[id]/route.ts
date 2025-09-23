@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from "@/lib/middleware"
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     requireRole(ctx, ["ADMIN", "SUPER_ADMIN", "TECHNICIAN"])
 
     const roleId = parseInt(params.id)
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     requireRole(ctx, ["ADMIN", "SUPER_ADMIN"])
 
     const roleId = parseInt(params.id)
@@ -104,7 +104,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     requireRole(ctx, ["SUPER_ADMIN"]) // Solo SUPER_ADMIN puede eliminar roles
 
     const roleId = parseInt(params.id)

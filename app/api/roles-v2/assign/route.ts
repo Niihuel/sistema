@@ -22,7 +22,7 @@ const removeRoleSchema = z.object({
 // POST /api/roles-v2/assign - Assign role to user
 export async function POST(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const body = await req.json()
 
     // Validate input
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 // DELETE /api/roles-v2/assign - Remove role from user
 export async function DELETE(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const body = await req.json()
 
     // Validate input

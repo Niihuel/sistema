@@ -4,7 +4,7 @@ import { requireAuth } from "@/lib/middleware"
 
 export async function POST(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     
     const result = await withDatabase(async (prisma) => {
       // Marcar todas las notificaciones no leídas del usuario como leídas

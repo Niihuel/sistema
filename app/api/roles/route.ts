@@ -1,14 +1,16 @@
-import { NextRequest } from "next/server"
-import { withDatabase } from "@/lib/prisma"
-import { requireAuth, requireRole } from "@/lib/middleware"
+﻿import { NextRequest, NextResponse } from 'next/server'
+import { withDatabase } from '@/lib/prisma'
+import { requireAllDynamicPermissions } from '@/lib/middleware'
 
 export async function GET(req: NextRequest) {
-  try {
-    const ctx = requireAuth(req)
-    requireRole(ctx, ["ADMIN", "SUPER_ADMIN", "TECHNICIAN"])
+  const authResult = await requireAllDynamicPermissions(['roles:view'])(req)
+  if (authResult instanceof NextResponse) {
+    return authResult
+  }
 
+  try {
     const roles = await withDatabase(async (prisma) => {
-      return await prisma.role.findMany({
+      return prisma.role.findMany({
         where: {
           isActive: true,
           deletedAt: null
@@ -25,9 +27,7 @@ export async function GET(req: NextRequest) {
           isSystem: true,
           permissions: true,
           maxUsers: true,
-          _count: {
-            select: { userRoles: true }
-          },
+          _count: { select: { userRoles: true } },
           createdAt: true,
           updatedAt: true
         },
@@ -39,37 +39,45 @@ export async function GET(req: NextRequest) {
       })
     })
 
-    return Response.json(roles)
-  } catch (e) {
-    console.error('Error in /api/roles GET:', e)
-    if (e instanceof Response) return e
-    return Response.json({ error: "Error listando roles" }, { status: 500 })
+    return NextResponse.json(roles)
+  } catch (error) {
+    console.error('Error in /api/roles GET:', error)
+    if (error instanceof NextResponse) {
+      return error
+    }
+
+    return NextResponse.json({ error: 'Error listando roles' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const ctx = requireAuth(req)
-    requireRole(ctx, ["ADMIN", "SUPER_ADMIN"])
+  const authResult = await requireAllDynamicPermissions(['roles:create'])(req)
+  if (authResult instanceof NextResponse) {
+    return authResult
+  }
 
+  const context = authResult
+
+  try {
     const data = await req.json()
 
-    // Validación básica
     if (!data.name || !data.displayName) {
-      return Response.json({ error: "Nombre y nombre para mostrar son requeridos" }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Nombre y nombre para mostrar son requeridos' },
+        { status: 400 }
+      )
     }
 
     const created = await withDatabase(async (prisma) => {
-      // Verificar si ya existe un rol con ese nombre
       const existing = await prisma.role.findFirst({
         where: { name: data.name.toUpperCase() }
       })
 
       if (existing) {
-        throw new Error("Ya existe un rol con ese nombre")
+        throw new Error('Ya existe un rol con ese nombre')
       }
 
-      return await prisma.role.create({
+      return prisma.role.create({
         data: {
           name: data.name.toUpperCase(),
           displayName: data.displayName,
@@ -82,18 +90,20 @@ export async function POST(req: NextRequest) {
           isActive: true,
           permissions: data.permissions ? JSON.stringify(data.permissions) : null,
           maxUsers: data.maxUsers || null,
-          createdBy: ctx.username
+          createdBy: context.username
         }
       })
     })
 
-    return Response.json(created, { status: 201 })
-  } catch (e) {
-    console.error('Error in /api/roles POST:', e)
-    if (e instanceof Response) return e
-    const errorMessage = e instanceof Error ? e.message : "Error creando rol"
-    return Response.json({ error: errorMessage }, { status: 500 })
+    return NextResponse.json(created, { status: 201 })
+  } catch (error) {
+    console.error('Error in /api/roles POST:', error)
+    if (error instanceof NextResponse) {
+      return error
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Error creando rol'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
-
 

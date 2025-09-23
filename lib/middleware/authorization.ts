@@ -26,7 +26,7 @@ export function requirePermission(resource: string, action: string) {
   return async (req: NextRequest): Promise<AuthorizationContext | NextResponse> => {
     try {
       // First check authentication
-      const authContext = requireAuth(req)
+      const authContext = await requireAuth(req)
 
       // Check permission
       const hasPermission = await withDatabase(async (prisma) => {
@@ -77,7 +77,7 @@ export function requirePermission(resource: string, action: string) {
 export function requireAnyPermission(permissions: Array<{ resource: string; action: string }>) {
   return async (req: NextRequest): Promise<AuthorizationContext | NextResponse> => {
     try {
-      const authContext = requireAuth(req)
+      const authContext = await requireAuth(req)
 
       const hasPermission = await withDatabase(async (prisma) => {
         const service = new RoleManagementService(prisma)
@@ -126,7 +126,7 @@ export function requireAnyPermission(permissions: Array<{ resource: string; acti
 export function requireAllPermissions(permissions: Array<{ resource: string; action: string }>) {
   return async (req: NextRequest): Promise<AuthorizationContext | NextResponse> => {
     try {
-      const authContext = requireAuth(req)
+      const authContext = await requireAuth(req)
 
       const hasPermission = await withDatabase(async (prisma) => {
         const service = new RoleManagementService(prisma)
@@ -174,7 +174,7 @@ export function requireAllPermissions(permissions: Array<{ resource: string; act
  */
 export async function attachPermissions(req: NextRequest): Promise<AuthorizationContext> {
   try {
-    const authContext = requireAuth(req)
+    const authContext = await requireAuth(req)
 
     const enrichedContext = await withDatabase(async (prisma) => {
       const service = new RoleManagementService(prisma)
@@ -315,7 +315,7 @@ export function requireAdmin() {
 export function canManageRole(targetRoleId: number) {
   return async (req: NextRequest): Promise<boolean> => {
     try {
-      const authContext = requireAuth(req)
+      const authContext = await requireAuth(req)
 
       return await withDatabase(async (prisma) => {
         const service = new RoleManagementService(prisma)

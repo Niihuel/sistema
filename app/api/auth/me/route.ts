@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     let ctx;
     try {
       console.log(`[/api/auth/me] ${requestId}: Checking auth context`)
-      ctx = requireAuth(req)
+      ctx = await requireAuth(req)
       console.log(`[/api/auth/me] ${requestId}: Auth context obtained for user ${ctx.userId}`)
     } catch (authError) {
       console.log(`[/api/auth/me] ${requestId}: Auth error:`, authError)

@@ -11,7 +11,7 @@ import { getNotificationTriggers } from "@/lib/notification-triggers"
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     
     const results = await withDatabase(async (prisma) => {
       const tests = {
@@ -109,3 +109,4 @@ export async function GET(req: NextRequest) {
     }, { status: 500 })
   }
 }
+

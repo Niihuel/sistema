@@ -7,7 +7,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const { id } = await context.params
     const notificationId = parseInt(id)
 

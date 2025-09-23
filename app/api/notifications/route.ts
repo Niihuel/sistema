@@ -5,7 +5,7 @@ import { getNotificationEngine } from "@/lib/notification-engine"
 
 export async function GET(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const { searchParams } = new URL(req.url)
     
     const limit = Math.min(Number(searchParams.get("limit") || 20), 100)
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const { type, title, message, priority = 'NORMAL', data } = await req.json()
     
     if (!type || !title) {
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 // Trigger manual notification check for development/testing
 export async function PUT(req: NextRequest) {
   try {
-    requireAuth(req)
+    await requireAuth(req)
     
     await withDatabase(async (prisma) => {
       const engine = getNotificationEngine(prisma)

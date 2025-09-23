@@ -22,7 +22,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const { id } = await context.params
     const roleId = parseInt(id)
 
@@ -104,7 +104,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const { id } = await context.params
     const roleId = parseInt(id)
     const body = await req.json()
@@ -182,7 +182,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
     const { id } = await context.params
     const roleId = parseInt(id)
 

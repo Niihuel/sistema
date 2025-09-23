@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ type: string }> }
 ) {
   try {
-    const ctx = requireAuth(req)
+    const ctx = await requireAuth(req)
 
     const { searchParams } = new URL(req.url)
     const dateFrom = searchParams.get('dateFrom')
