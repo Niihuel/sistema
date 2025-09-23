@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react'
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode, useRef } from 'react'
 import { useAuth } from '@/components/providers/AuthProvider'
 
 interface Role {
@@ -54,6 +54,10 @@ interface PermissionsState {
 }
 
 interface PermissionsContextValue extends PermissionsState {
+  // User data
+  user: any | null
+  loading: boolean
+
   // Permission checking functions
   hasPermission: (resource: string, action: string) => boolean
   hasAnyPermission: (...permissions: string[]) => boolean
@@ -84,6 +88,7 @@ const CACHE_DURATION = 5 * 60 * 1000
 
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const hasFetchedRef = useRef(false)
 
   const [state, setState] = useState<PermissionsState>({
     roles: [],
@@ -109,25 +114,16 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Check cache
-    if (state.lastFetch && Date.now() - state.lastFetch.getTime() < CACHE_DURATION) {
-      return
-    }
-
     setState(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Fetch all permission data in parallel
-      const [rolesRes, permissionsRes, overridesRes] = await Promise.all([
+      // Fetch role and permission data in parallel
+      const [rolesRes, permissionsRes] = await Promise.all([
         fetch(`/api/roles-v2/user/${user.id}`, {
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' }
         }),
         fetch(`/api/roles-v2/permissions/${user.id}`, {
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        }),
-        fetch(`/api/permissions/overrides/${user.id}`, {
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' }
         })
@@ -139,65 +135,137 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
       const rolesData = await rolesRes.json()
       const permissionsData = await permissionsRes.json()
-      const overridesData = overridesRes.ok ? await overridesRes.json() : { data: [] }
 
       // Process permissions into a Set for fast lookup
       const permissionsSet = new Set<string>()
-      const effectivePerms: EffectivePermission[] = permissionsData.data || []
 
-      effectivePerms.forEach(perm => {
-        if (perm.granted) {
-          permissionsSet.add(`${perm.resource}:${perm.action}`)
-        }
+      // Handle the permissions API response structure
+      const effectivePerms: EffectivePermission[] = []
+      const userPermissions = permissionsData.permissions || []
+
+      // Convert permission objects to the format we need
+      userPermissions.forEach((perm: any) => {
+        const permKey = `${perm.resource}:${perm.action}`
+        permissionsSet.add(permKey)
+
+        effectivePerms.push({
+          resource: perm.resource,
+          action: perm.action,
+          source: perm.source || 'role',
+          granted: true,
+          roleId: perm.roleId
+        })
       })
 
+      // Add wildcard permissions for SUPER_ADMIN
+      if (rolesData.roles?.some((role: any) => role.name === 'SuperAdmin' || role.level >= 100)) {
+        permissionsSet.add('*:*')
+        effectivePerms.push({
+          resource: '*',
+          action: '*',
+          source: 'role',
+          granted: true
+        })
+      }
+
       setState({
-        roles: rolesData.data || [],
+        roles: rolesData.roles || [],
         permissions: permissionsSet,
         effectivePermissions: effectivePerms,
-        overrides: overridesData.data || [],
+        overrides: [],
         isLoading: false,
         error: null,
         lastFetch: new Date()
       })
     } catch (error) {
-      console.error('Error fetching permissions:', error)
+      console.error('[usePermissionsV2] Error fetching permissions:', error)
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error as Error
+        error: error as Error,
+        // Set cache time to prevent immediate retry
+        lastFetch: new Date()
       }))
     }
-  }, [user?.id, isAuthenticated, state.lastFetch])
+  }, [user?.id, isAuthenticated])
 
   // Initial fetch
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    // Skip if still loading auth
+    if (authLoading) return
+
+    // Skip if not authenticated
+    if (!isAuthenticated || !user?.id) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        roles: [],
+        permissions: new Set(),
+        effectivePermissions: [],
+        overrides: []
+      }))
+      hasFetchedRef.current = false
+      return
+    }
+
+    // Only fetch once per user session
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true
       fetchPermissions()
     }
-  }, [authLoading, isAuthenticated, fetchPermissions])
+  }, [authLoading, isAuthenticated, user?.id, fetchPermissions])
 
   // Permission checking functions
   const hasPermission = useCallback((resource: string, action: string): boolean => {
+    // FALLBACK: Check legacy user role for SUPER_ADMIN
+    if (user?.role === 'SUPER_ADMIN') {
+      return true
+    }
+
     const key = `${resource}:${action}`
     return state.permissions.has(key) || state.permissions.has('*:*')
-  }, [state.permissions])
+  }, [state.permissions, user?.role])
 
   const hasAnyPermission = useCallback((...permissions: string[]): boolean => {
+    // FALLBACK: Check legacy user role for SUPER_ADMIN
+    if (user?.role === 'SUPER_ADMIN') {
+      return true
+    }
+
     if (state.permissions.has('*:*')) return true
     return permissions.some(perm => state.permissions.has(perm))
-  }, [state.permissions])
+  }, [state.permissions, user?.role])
 
   const hasAllPermissions = useCallback((...permissions: string[]): boolean => {
+    // FALLBACK: Check legacy user role for SUPER_ADMIN
+    if (user?.role === 'SUPER_ADMIN') {
+      return true
+    }
+
     if (state.permissions.has('*:*')) return true
     return permissions.every(perm => state.permissions.has(perm))
-  }, [state.permissions])
+  }, [state.permissions, user?.role])
 
   // Simple permission checker - used by components
   const can = useCallback((permission: string): boolean => {
+    console.log('[usePermissionsV2] can() called:', {
+      permission,
+      userRole: user?.role,
+      userExists: !!user,
+      hasWildcard: state.permissions.has('*:*'),
+      hasSpecificPerm: state.permissions.has(permission),
+      permissionsSize: state.permissions.size
+    })
+
+    // FALLBACK: Check legacy user role for SUPER_ADMIN
+    if (user?.role === 'SUPER_ADMIN') {
+      console.log('[usePermissionsV2] SUPER_ADMIN fallback activated - granting access')
+      return true
+    }
+
     if (state.permissions.has('*:*')) return true
     return state.permissions.has(permission)
-  }, [state.permissions])
+  }, [state.permissions, user?.role])
 
   // Role checking functions
   const hasRole = useCallback((roleName: string): boolean => {
@@ -254,15 +322,19 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   // Data management functions
   const refresh = useCallback(async () => {
     setState(prev => ({ ...prev, lastFetch: null }))
+    hasFetchedRef.current = false
     await fetchPermissions()
   }, [fetchPermissions])
 
   const clearCache = useCallback(() => {
     setState(prev => ({ ...prev, lastFetch: null }))
+    hasFetchedRef.current = false
   }, [])
 
   const value: PermissionsContextValue = {
     ...state,
+    user,
+    loading: authLoading || state.isLoading,
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,

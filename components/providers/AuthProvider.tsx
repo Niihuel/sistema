@@ -65,18 +65,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (text) {
           try {
             const userData = JSON.parse(text)
+            console.log('[AuthProvider] Parsed user data:', userData)
             setUser(userData)
           } catch (err) {
-            console.warn('Invalid JSON response:', text)
+            console.error('[AuthProvider] JSON parse error:', err)
             setUser(null)
           }
         } else {
+          console.log('[AuthProvider] Empty response body')
           setUser(null)
         }
       } else if (response.status === 401) {
+        console.log('[AuthProvider] Unauthorized response (401)')
         setUser(null)
       } else {
-        setError('Failed to fetch user data')
+        console.error('[AuthProvider] Failed to fetch user data, status:', response.status)
+        setUser(null)
       }
     } catch (err) {
       console.warn('Auth fetch error:', err)

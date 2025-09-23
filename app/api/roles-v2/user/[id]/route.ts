@@ -19,7 +19,7 @@ export async function GET(
       }
 
       // Only allow users to view their own roles, unless they're admin
-      if (!authContext.user || (authContext.user.id !== userId && authContext.user.role !== 'SUPER_ADMIN' && authContext.user.role !== 'ADMIN')) {
+      if (!authContext || (authContext.userId !== userId && authContext.role !== 'SUPER_ADMIN' && authContext.role !== 'ADMIN')) {
         return NextResponse.json(
           { error: 'No tienes permisos para ver los roles de este usuario' },
           { status: 403 }

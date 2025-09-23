@@ -393,7 +393,7 @@ async function main() {
         })
         console.log(`  ✅ User created successfully: ${userData.username}`)
       } catch (error) {
-        console.error(`  ❌ Failed to create user ${userData.username}:`, error.message)
+        console.error(`  ❌ Failed to create user ${userData.username}:`, (error as Error).message)
         throw error
       }
     } else {

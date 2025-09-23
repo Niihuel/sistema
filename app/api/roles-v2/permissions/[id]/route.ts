@@ -19,7 +19,7 @@ export async function GET(
       }
 
       // Only allow users to view their own permissions, unless they're admin
-      if (!authContext.user || (authContext.user.id !== userId && authContext.user.role !== 'SUPER_ADMIN' && authContext.user.role !== 'ADMIN')) {
+      if (!authContext || (authContext.userId !== userId && authContext.role !== 'SUPER_ADMIN' && authContext.role !== 'ADMIN')) {
         return NextResponse.json(
           { error: 'No tienes permisos para ver los permisos de este usuario' },
           { status: 403 }
@@ -43,13 +43,6 @@ export async function GET(
                   }
                 }
               }
-            }
-          },
-          // Also get any direct permission overrides (if they exist)
-          permissionOverrides: {
-            where: { isActive: true },
-            include: {
-              permission: true
             }
           }
         }
@@ -91,28 +84,7 @@ export async function GET(
         })
       })
 
-      // Apply permission overrides
-      userPermissions.permissionOverrides?.forEach(override => {
-        const permKey = `${override.permission.resource}:${override.permission.action}`
-
-        if (override.granted) {
-          // Grant permission override
-          rolePermissions.set(permKey, {
-            id: override.permission.id,
-            name: override.permission.name,
-            resource: override.permission.resource,
-            action: override.permission.action,
-            displayName: override.permission.displayName,
-            description: override.permission.description,
-            riskLevel: override.permission.riskLevel,
-            source: 'override',
-            overrideType: 'granted'
-          })
-        } else {
-          // Revoke permission override
-          rolePermissions.delete(permKey)
-        }
-      })
+      // Note: Permission overrides not implemented yet in database schema
 
       // Convert to array and sort by resource and action
       const finalPermissions = Array.from(rolePermissions.values()).sort((a, b) => {

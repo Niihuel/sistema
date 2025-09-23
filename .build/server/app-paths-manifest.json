@@ -1,4 +1,4 @@
 {
-  "/api/notifications/route": "app/api/notifications/route.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/api/auth/me/route": "app/api/auth/me/route.js",
+  "/(protected)/dashboard/page": "app/(protected)/dashboard/page.js"
 }
