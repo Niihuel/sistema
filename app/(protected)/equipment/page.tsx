@@ -480,16 +480,16 @@ export default function EquipmentPage() {
 
       {/* Desktop Table */}
       <FadeInUp delay={0.3} className="hidden md:block">
-        <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm min-w-[600px]">
-          <thead>
-            <tr className="text-left text-white/70">
-              <th className="p-2 sm:p-3">Nombre</th>
-              <th className="p-2 sm:p-3">Tipo</th>
-              <th className="p-2 sm:p-3">N° Serie</th>
-              <th className="p-2 sm:p-3">Ubicación</th>
-              <th className="p-2 sm:p-3">Estado</th>
-              <th className="p-2 sm:p-3 w-32">Acciones</th>
+          <thead className="bg-white/5 border-b border-white/10">
+            <tr className="text-left">
+              <th className="p-2 sm:p-3 text-white/80 font-medium">Nombre</th>
+              <th className="p-2 sm:p-3 text-white/80 font-medium">Tipo</th>
+              <th className="p-2 sm:p-3 text-white/80 font-medium">N° Serie</th>
+              <th className="p-2 sm:p-3 text-white/80 font-medium">Ubicación</th>
+              <th className="p-2 sm:p-3 text-white/80 font-medium">Estado</th>
+              <th className="p-2 sm:p-3 text-white/80 font-medium w-32">Acciones</th>
             </tr>
           </thead>
           <tbody>

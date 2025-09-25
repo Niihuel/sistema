@@ -1,0 +1,63 @@
+# Configuración de Cloudflare Tunnel para Sistema IT
+# Este archivo se usa con cloudflared para exponer la aplicación de forma segura
+
+tunnel: sistema-it
+credentials-file: C:\Users\AuxSistemas\.cloudflared\credentials.json
+
+# Configuración de ingreso
+ingress:
+  # Ruta principal - Sistema IT
+  - hostname: sistema.tudominio.com
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+      tcpKeepAlive: 30s
+      keepAliveConnections: 1024
+      keepAliveTimeout: 90s
+      httpHostHeader: sistema.tudominio.com
+      originServerName: sistema.tudominio.com
+      caPool: ""
+      noHappyEyeballs: false
+      proxyAddress: ""
+      proxyPort: 0
+      proxyType: ""
+      tcpKeepAlive: 30s
+      http2Origin: true
+
+  # API endpoints
+  - hostname: api.sistema.tudominio.com
+    service: http://localhost:3000
+    path: /api/*
+    originRequest:
+      noTLSVerify: true
+
+  # Archivos estáticos y PWA
+  - hostname: sistema.tudominio.com
+    path: /_next/*
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+
+  # Service Worker y Manifest
+  - hostname: sistema.tudominio.com
+    path: /sw.js
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+
+  - hostname: sistema.tudominio.com
+    path: /manifest.json
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+
+  # Imágenes y assets
+  - hostname: sistema.tudominio.com
+    path: /icon-*
+    service: http://localhost:3000
+    originRequest:
+      noTLSVerify: true
+
+  # Fallback - debe ir al final
+  - service: http_status:404

@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Button from '@/components/button'
 import { usePermissionsV2 } from '@/lib/hooks/usePermissionsV2'
 
 export default function Error({
@@ -78,19 +77,18 @@ export default function Error({
         {/* Action Buttons - Solo mostrar cuando no estemos cargando */}
         {!isLoading && (
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
+            <button
               onClick={reset}
-              variant="ghost"
-              className="px-6 py-3"
+              className="flex-1 px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
             >
               ↻ Reintentar
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleGoHome}
-              className="px-6 py-3"
+              className="flex-1 px-6 py-3 rounded-lg bg-white text-black hover:bg-white/90 font-medium transition-colors"
             >
               {isAuthenticated ? 'Ir al Dashboard' : 'Ir al Login'}
-            </Button>
+            </button>
           </div>
         )}
 

@@ -1,93 +1,69 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { withDatabase } from '@/lib/prisma'
-import { requireAllDynamicPermissions } from '@/lib/middleware'
+import { requireAuth } from '@/lib/middleware'
+import logger from '@/lib/logger'
 
+// GET /api/permissions - Get all available permissions
 export async function GET(req: NextRequest) {
-  const authResult = await requireAllDynamicPermissions(['roles:view'])(req)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-
   try {
+    const ctx = await requireAuth(req)
+
     const permissions = await withDatabase(async (prisma) => {
-      return prisma.permission.findMany({
-        include: { role: true },
-        orderBy: { roleId: 'asc' }
-      })
-    })
-
-    return NextResponse.json(permissions)
-  } catch (error) {
-    console.error('Error in /api/permissions GET:', error)
-    if (error instanceof NextResponse) {
-      return error
-    }
-
-    return NextResponse.json({ error: 'Error listando permisos' }, { status: 500 })
-  }
-}
-
-export async function POST(req: NextRequest) {
-  const authResult = await requireAllDynamicPermissions(['roles:edit'])(req)
-  if (authResult instanceof NextResponse) {
-    return authResult
-  }
-
-  try {
-    const { roleId, resource, level } = await req.json()
-
-    if (!roleId || !resource || !level) {
-      return NextResponse.json(
-        { error: 'roleId, resource y level son requeridos' },
-        { status: 400 }
-      )
-    }
-
-    if (!['READ', 'WRITE', 'ADMIN'].includes(level)) {
-      return NextResponse.json(
-        { error: 'Level debe ser READ, WRITE o ADMIN' },
-        { status: 400 }
-      )
-    }
-
-    const permission = await withDatabase(async (prisma) => {
-      const role = await prisma.role.findUnique({ where: { id: Number(roleId) } })
-      if (!role) {
-        throw new Error('Rol no encontrado')
-      }
-
-      const existingPermission = await prisma.permission.findUnique({
-        where: {
-          roleId_resource_level: {
-            roleId: Number(roleId),
-            resource: String(resource),
-            level: String(level)
+      // Check if user has permission to view permissions
+      const userRole = await prisma.userRole.findFirst({
+        where: { userId: ctx.userId, isActive: true },
+        include: {
+          role: {
+            include: {
+              rolePermissions: {
+                where: { isActive: true },
+                include: { permission: true }
+              }
+            }
           }
-        }
+        },
+        orderBy: { role: { level: 'desc' } }
       })
 
-      if (existingPermission) {
-        throw new Error('Este permiso ya existe para el rol')
+      const hasPermission = userRole?.role.rolePermissions.some(rp =>
+        (rp.permission.resource === 'roles' && rp.permission.action === 'view') ||
+        (rp.permission.resource === '*' && rp.permission.action === '*')
+      )
+
+      if (!hasPermission && !['SUPER_ADMIN', 'ADMIN'].includes(userRole?.role.name || '')) {
+        throw new Error('Insufficient permissions to view permissions')
       }
 
-      return prisma.permission.create({
-        data: {
-          roleId: Number(roleId),
-          resource: String(resource),
-          level: String(level)
-        },
-        include: { role: true }
+      // Get all permissions
+      return await prisma.permission.findMany({
+        where: { isActive: true },
+        orderBy: [
+          { category: 'asc' },
+          { resource: 'asc' },
+          { action: 'asc' }
+        ]
       })
     })
 
-    return NextResponse.json(permission, { status: 201 })
-  } catch (error) {
-    console.error('Error in /api/permissions POST:', error)
-    if (error instanceof NextResponse) {
-      return error
-    }
+    logger.info('Fetched permissions list', {
+      userId: ctx.userId,
+      count: permissions.length,
+      path: req.url
+    })
 
-    const errorMessage = error instanceof Error ? error.message : 'Error creando permiso'
-    return NextResponse.json({ error: errorMessage }, { status: 500 })
+    return NextResponse.json({
+      success: true,
+      data: permissions
+    })
+  } catch (error) {
+    logger.error('Error fetching permissions', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      path: req.url
+    })
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to fetch permissions' },
+      { status: error instanceof Error && error.message.includes('permissions') ? 403 : 500 }
+    )
   }
 }

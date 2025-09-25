@@ -364,6 +364,9 @@ export function usePermissionsV2() {
   return context
 }
 
+// Alias for backwards compatibility
+export const usePermissions = usePermissionsV2
+
 // Helper hook for common permission patterns
 export function useCan() {
   const { hasPermission, hasAnyPermission, hasRole } = usePermissionsV2()

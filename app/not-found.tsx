@@ -1,12 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import Button from '@/components/button'
-import { useAuth } from '@/components/providers/AuthProvider'
+import { usePermissionsV2 } from '@/lib/hooks/usePermissionsV2'
 
 export default function NotFound() {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, loading: isLoading } = usePermissionsV2()
+  const isAuthenticated = !!user
 
   const handleGoBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -34,9 +34,9 @@ export default function NotFound() {
       <div className="text-center space-y-6 max-w-lg">
         {/* 404 Icon */}
         <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center">
-            <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33" />
+          <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
+            <svg className="w-10 h-10 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
         </div>
@@ -53,19 +53,18 @@ export default function NotFound() {
         {/* Action Buttons - Solo mostrar cuando no estemos cargando */}
         {!isLoading && (
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
+            <button
               onClick={handleGoBack}
-              variant="ghost"
-              className="px-6 py-3"
+              className="flex-1 px-6 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
             >
               ← Volver
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={handleGoHome}
-              className="px-6 py-3"
+              className="flex-1 px-6 py-3 rounded-lg bg-white text-black hover:bg-white/90 font-medium transition-colors"
             >
               {isAuthenticated ? 'Ir al Dashboard' : 'Ir al Login'}
-            </Button>
+            </button>
           </div>
         )}
 

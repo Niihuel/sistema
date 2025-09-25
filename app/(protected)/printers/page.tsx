@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
-import PermissionGuard from "@/components/PermissionGuard"
+import { RoleGuard, Can } from "@/components/roles/RoleGuard"
 import Modal from "@/components/modal"
 import Button from "@/components/button"
 import ConfirmDialog from "@/components/confirm-dialog"
@@ -318,7 +318,7 @@ export default function PrintersPage() {
             </div>
           ))}
           <div className="w-full sm:w-auto">
-            <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+            {can('printers:create') && (
               <Button
                 onClick={() => {
                   resetForm()
@@ -327,7 +327,7 @@ export default function PrintersPage() {
               >
                 Nueva Impresora
               </Button>
-            </PermissionGuard>
+            )}
           </div>
         </div>
       </div>
@@ -394,12 +394,12 @@ export default function PrintersPage() {
                       </span>
                     </td>
                     <td className="p-3 flex gap-2">
-                      <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+                      {can('printers:edit') && (
                         <Button onClick={() => handleEdit(printer)} variant="ghost" small>Editar</Button>
-                      </PermissionGuard>
-                      <PermissionGuard roles={['ADMIN']} showToast={false}>
+                      )}
+                      {can('printers:delete') && (
                         <Button onClick={() => setDeleteConfirm({ isOpen: true, printer })} small>Eliminar</Button>
-                      </PermissionGuard>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -430,12 +430,12 @@ export default function PrintersPage() {
                   {printer.ip && <div>IP: {printer.ip}</div>}
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+                  {can('printers:edit') && (
                     <Button onClick={() => handleEdit(printer)} variant="ghost" small>Editar</Button>
-                  </PermissionGuard>
-                  <PermissionGuard roles={['ADMIN']} showToast={false}>
+                  )}
+                  {can('printers:delete') && (
                     <Button onClick={() => setDeleteConfirm({ isOpen: true, printer })} small>Eliminar</Button>
-                  </PermissionGuard>
+                  )}
                 </div>
               </div>
             ))

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Users as UsersIcon } from "lucide-react"
 import { RoleBadgeGroup } from "./RoleBadge"
 import Button from "../button"
 
@@ -52,17 +53,8 @@ export function UserCard({
     busy: "bg-red-500"
   }
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
   const getHighestRole = () => {
-    if (!user.roles.length) return null
+    if (!user.roles || !user.roles.length) return null
     return user.roles.reduce((highest, role) =>
       (role.level || 0) > (highest.level || 0) ? role : highest
     )
@@ -96,16 +88,16 @@ export function UserCard({
         {/* Avatar */}
         <div className="relative">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl"
+            className="w-16 h-16 rounded-full flex items-center justify-center text-white"
             style={{
               backgroundColor: highestRole?.color || "#95A5A6",
-              boxShadow: `0 0 20px ${highestRole?.color}40`
+              boxShadow: `0 0 20px ${(highestRole?.color || "#95A5A6")}40`
             }}
           >
             {user.avatar ? (
-              <img src={user.avatar} alt={user.username} className="w-full h-full rounded-full" />
+              <img src={user.avatar} alt={user.username} className="w-full h-full rounded-full object-cover" />
             ) : (
-              getInitials(user.username)
+              <UsersIcon className="w-8 h-8" />
             )}
           </div>
           {user.status && (
@@ -123,7 +115,7 @@ export function UserCard({
           )}
 
           {/* Roles */}
-          <RoleBadgeGroup roles={user.roles} size="sm" maxDisplay={3} />
+          <RoleBadgeGroup roles={user.roles || []} size="sm" maxDisplay={3} />
 
           {/* Stats */}
           <div className="flex gap-4 mt-3 text-xs text-gray-500">

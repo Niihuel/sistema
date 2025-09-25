@@ -319,17 +319,17 @@ function EmployeesPage() {
 
       {/* Desktop Table */}
       <FadeInUp delay={0.3} className="hidden md:block">
-        <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-white/70">
-              <th className="p-3">Nombre</th>
-              <th className="p-3">Apellido</th>
-              <th className="p-3">Área</th>
-              <th className="p-3">Email</th>
-              <th className="p-3">Teléfono</th>
-              <th className="p-3">Estado</th>
-              <th className="p-3 w-32">Acciones</th>
+          <thead className="bg-white/5 border-b border-white/10">
+            <tr className="text-left">
+              <th className="p-3 text-white/80 font-medium">Nombre</th>
+              <th className="p-3 text-white/80 font-medium">Apellido</th>
+              <th className="p-3 text-white/80 font-medium">Área</th>
+              <th className="p-3 text-white/80 font-medium">Email</th>
+              <th className="p-3 text-white/80 font-medium">Teléfono</th>
+              <th className="p-3 text-white/80 font-medium">Estado</th>
+              <th className="p-3 text-white/80 font-medium w-32">Acciones</th>
             </tr>
           </thead>
           <tbody>

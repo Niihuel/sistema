@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { Crown, Shield, User, Star, Settings, Zap, Users, Eye, Edit, Trash2, Copy, MoreHorizontal, AlertTriangle } from 'lucide-react'
 import { RoleBadge } from './RoleBadge'
 import AnimatedContainer, { FadeInUp } from '@/components/animated-container'
@@ -40,7 +40,7 @@ interface RoleCardProps {
   onDuplicate?: (role: Role) => void
   onManagePermissions?: (role: Role) => void
   onViewUsers?: (role: Role) => void
-  dragHandleProps?: any
+  dragHandleProps?: ComponentProps<'div'>
   isDragging?: boolean
   selectable?: boolean
   selected?: boolean
@@ -85,7 +85,9 @@ export function RoleCard({
   const [isHovered, setIsHovered] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
 
-  const IconComponent = role.icon ? ROLE_ICONS[role.icon as keyof typeof ROLE_ICONS] : Shield
+  const IconComponent = role.icon && ROLE_ICONS[role.icon as keyof typeof ROLE_ICONS] 
+    ? ROLE_ICONS[role.icon as keyof typeof ROLE_ICONS] 
+    : Shield
 
   // Calculate permission risk distribution
   const riskDistribution = role.permissions?.reduce((acc, perm) => {
@@ -325,50 +327,19 @@ export function RoleCard({
                 </button>
               )}
 
-              {/* More Actions Dropdown */}
-              <div className="relative">
+              {/* Delete button - only show if role can be deleted */}
+              {onDelete && !role.isSystem && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    setShowDropdown(!showDropdown)
+                    onDelete(role)
                   }}
-                  className="px-2 py-1.5 bg-white/10 hover:bg-white/20 rounded-md text-xs font-medium border border-white/10 transition-colors"
+                  className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 rounded-md text-xs font-medium text-red-400 border border-red-500/30 transition-colors flex items-center gap-1"
                 >
-                  <MoreHorizontal className="w-3 h-3" />
+                  <Trash2 className="w-3 h-3" />
+                  Delete
                 </button>
-
-                {showDropdown && (
-                  <div className="absolute top-full right-0 mt-1 w-32 bg-black/90 border border-white/20 rounded-md shadow-xl z-20">
-                    {onDuplicate && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onDuplicate(role)
-                          setShowDropdown(false)
-                        }}
-                        className="w-full px-3 py-2 text-left text-xs hover:bg-white/10 flex items-center gap-2"
-                      >
-                        <Copy className="w-3 h-3" />
-                        Duplicate
-                      </button>
-                    )}
-
-                    {onDelete && !role.isSystem && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onDelete(role)
-                          setShowDropdown(false)
-                        }}
-                        className="w-full px-3 py-2 text-left text-xs hover:bg-red-500/20 text-red-400 flex items-center gap-2"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -469,3 +440,5 @@ export function RoleCardGrid({
     </AnimatedContainer>
   )
 }
+// Default export
+export default RoleCard

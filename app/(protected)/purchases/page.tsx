@@ -8,6 +8,7 @@ import AnimatedContainer, { FadeInUp } from "@/components/animated-container"
 import MobileTable from "@/components/mobile-table"
 import { useAppAuth } from "@/lib/hooks/useAppAuth"
 import { useToast } from "@/lib/hooks/use-toast"
+import { Can } from "@/components/roles/RoleGuard"
 import { usePermissionToast } from "@/lib/hooks/usePermissionToast"
 
 type Purchase = {
@@ -226,10 +227,12 @@ export default function PurchasesPage() {
       label: "Acciones", 
       render: (_: unknown, item: Record<string, unknown>) => (
         <div className="flex gap-2 justify-end">
-          <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+          <Can I="edit" on="purchases">
             <Button onClick={() => openEdit(item as Purchase)} variant="ghost" small>Editar</Button>
+          </Can>
+          <Can I="delete" on="purchases">
             <Button onClick={() => setDeleteId(item.id as number)} small>Eliminar</Button>
-          </PermissionGuard>
+          </Can>
         </div>
       )
     }
@@ -250,9 +253,9 @@ export default function PurchasesPage() {
           </select>
         </div>
         <Button onClick={() => load()}>Filtrar</Button>
-        <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+        <Can I="create" on="purchases">
           <Button onClick={() => openCreate()} variant="ghost">Nuevo</Button>
-        </PermissionGuard>
+        </Can>
         </div>
         </div>
       </FadeInUp>
@@ -263,17 +266,17 @@ export default function PurchasesPage() {
 
       {/* Desktop Table */}
       <FadeInUp delay={0.3} className="hidden md:block">
-        <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-white/70">
-              <th className="p-3">ReqID</th>
-              <th className="p-3">Item</th>
-              <th className="p-3">Pedida</th>
-              <th className="p-3">Recibida</th>
-              <th className="p-3">Pendiente</th>
-              <th className="p-3">Estado</th>
-              <th className="p-3 w-24">Acciones</th>
+          <thead className="bg-white/5 border-b border-white/10">
+            <tr className="text-left">
+              <th className="p-3 text-white/80 font-medium">ReqID</th>
+              <th className="p-3 text-white/80 font-medium">Item</th>
+              <th className="p-3 text-white/80 font-medium">Pedida</th>
+              <th className="p-3 text-white/80 font-medium">Recibida</th>
+              <th className="p-3 text-white/80 font-medium">Pendiente</th>
+              <th className="p-3 text-white/80 font-medium">Estado</th>
+              <th className="p-3 text-white/80 font-medium w-24">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -295,10 +298,12 @@ export default function PurchasesPage() {
                     </span>
                   </td>
                   <td className="p-3 flex gap-2">
-                    <PermissionGuard roles={['ADMIN', 'TECHNICIAN']} showToast={false}>
+                    <Can I="edit" on="purchases">
                       <Button onClick={() => openEdit(p)} variant="ghost" small>Editar</Button>
+                    </Can>
+                    <Can I="delete" on="purchases">
                       <Button onClick={() => setDeleteId(p.id)} small>Eliminar</Button>
-                    </PermissionGuard>
+                    </Can>
                   </td>
                 </tr>
               ))
@@ -374,7 +379,6 @@ export default function PurchasesPage() {
         onConfirm={async () => { if (deleteId != null) { await remove(deleteId); setDeleteId(null) } }}
       />
 
-      )}
     </AnimatedContainer>
   )
 }

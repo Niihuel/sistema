@@ -519,19 +519,19 @@ export default function PurchaseRequestsPage() {
 
       {/* Desktop Table */}
       <div className="hidden md:block">
-        <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
+        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-white/70 border-b border-white/10">
-                <th className="p-3">Número</th>
-                <th className="p-3">Item</th>
-                <th className="p-3">Categoría</th>
-                <th className="p-3">Solicitante</th>
-                <th className="p-3">Cantidad</th>
-                <th className="p-3">Costo Est.</th>
-                <th className="p-3">Prioridad</th>
-                <th className="p-3">Estado</th>
-                <th className="p-3 w-24">Acciones</th>
+            <thead className="bg-white/5 border-b border-white/10">
+              <tr className="text-left">
+                <th className="p-3 text-white/80 font-medium">Número</th>
+                <th className="p-3 text-white/80 font-medium">Item</th>
+                <th className="p-3 text-white/80 font-medium">Categoría</th>
+                <th className="p-3 text-white/80 font-medium">Solicitante</th>
+                <th className="p-3 text-white/80 font-medium">Cantidad</th>
+                <th className="p-3 text-white/80 font-medium">Costo Est.</th>
+                <th className="p-3 text-white/80 font-medium">Prioridad</th>
+                <th className="p-3 text-white/80 font-medium">Estado</th>
+                <th className="p-3 text-white/80 font-medium w-24">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -546,15 +546,15 @@ export default function PurchaseRequestsPage() {
                     <td className="p-3 text-white font-medium">{request.itemName}</td>
                     <td className="p-3 text-white/80">{getCategoryLabel(request.category)}</td>
                     <td className="p-3 text-white/80">
-                      {request.requestor 
+                      {request.requestor
                         ? `${request.requestor.firstName} ${request.requestor.lastName}`
                         : '-'
                       }
                     </td>
                     <td className="p-3 text-white/80">{request.quantity}</td>
                     <td className="p-3 text-white/80">
-                      {request.estimatedCost 
-                        ? `$${request.estimatedCost.toLocaleString()}` 
+                      {request.estimatedCost
+                        ? `$${request.estimatedCost.toLocaleString()}`
                         : '-'
                       }
                     </td>
@@ -643,10 +643,10 @@ export default function PurchaseRequestsPage() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  {hasPermission('PURCHASE_REQUESTS', 'update') && (
+                  {can('purchase-requests:edit') && (
                     <Button onClick={() => handleEdit(request)} variant="ghost" small>Editar</Button>
                   )}
-                  {hasPermission('PURCHASE_REQUESTS', 'delete') && (
+                  {can('purchase-requests:delete') && (
                     <Button onClick={() => setDeleteConfirm({ isOpen: true, request })} small>Eliminar</Button>
                   )}
                 </div>

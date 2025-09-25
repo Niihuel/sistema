@@ -92,7 +92,7 @@ export default function DashboardPage() {
   // Show loading state while checking auth
   if (authLoading) {
     return (
-      <AnimatedContainer className="text-white p-4 sm:p-6">
+      <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="text-white/60">Cargando dashboard...</div>
@@ -105,7 +105,7 @@ export default function DashboardPage() {
   // Check if user is authenticated
   if (!isAuthenticated) {
     return (
-      <AnimatedContainer className="text-white p-4 sm:p-6">
+      <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="text-red-400 text-xl mb-2">No Autenticado</div>
@@ -122,7 +122,7 @@ export default function DashboardPage() {
   // Check if user has permission to access dashboard
   if (!can('dashboard:view')) {
     return (
-      <AnimatedContainer className="text-white p-4 sm:p-6">
+      <AnimatedContainer className="text-white px-2 sm:px-0">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="text-red-400 text-xl mb-2">Acceso Denegado</div>
@@ -134,15 +134,15 @@ export default function DashboardPage() {
   }
 
   return (
-    <AnimatedContainer className="text-white p-4 sm:p-6">
-      <FadeInUp delay={0.1}>
+    <AnimatedContainer className="text-white px-2 sm:px-0">
+      <FadeInUp delay={0.05}>
         <div className="mb-8">
           <h1 className="text-3xl font-semibold mb-2">Dashboard</h1>
           <p className="text-white/70">Vista general del sistema de gestión IT</p>
         </div>
       </FadeInUp>
-      
-      
+
+
       {!data ? (
         <FadeInUp delay={0.3}><p className="text-white/70">Cargando...</p></FadeInUp>
       ) : (
