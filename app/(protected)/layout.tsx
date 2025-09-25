@@ -24,11 +24,11 @@ export default function ProtectedLayout({
                 <PWABrowserBar />
                 <Header />
                 <PWAInstallPrompt />
-                <main className="pt-20 md:pt-24">
+                <main className="pt-16 md:pt-20">
                   <div
-                    className="px-4 sm:px-6 pt-8 pb-10 mx-auto w-full max-w-[1400px]"
+                    className="px-4 sm:px-6 pt-6 pb-10 mx-auto w-full max-w-[1400px]"
                     style={{
-                      paddingTop: 'max(2rem, env(safe-area-inset-top))',
+                      paddingTop: 'max(1.5rem, env(safe-area-inset-top))',
                       paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))'
                     }}
                   >

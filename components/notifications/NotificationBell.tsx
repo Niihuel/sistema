@@ -243,9 +243,12 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 ${
+        className={`relative rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 ${
           safeUnreadCount > 0 ? 'ring-2 ring-red-400/30' : ''
         }`}
+        style={{
+          padding: '8px'
+        }}
         title={`${safeUnreadCount} notificaciones no leídas`}
       >
         <Bell className={`w-4 h-4 transition-colors ${
@@ -262,14 +265,21 @@ export default function NotificationBell() {
         <>
           <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setIsOpen(false)} />
           
-          <div className="fixed md:absolute inset-x-4 md:inset-x-auto md:right-0 top-20 md:top-full md:mt-2 w-auto md:w-96 max-w-sm md:max-w-none mx-auto md:mx-0 bg-black/95 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ WebkitBackdropFilter: 'blur(24px)' }}>
+          <div
+            className="fixed md:absolute inset-x-1 md:inset-x-auto md:right-0 w-auto md:w-96 max-w-sm md:max-w-none mx-auto md:mx-0 bg-black/98 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl z-50 overflow-hidden"
+            style={{
+              WebkitBackdropFilter: 'blur(24px)',
+              top: window.innerWidth < 768 ? 'max(64px, env(safe-area-inset-top))' : 'calc(100% + 8px)',
+              maxHeight: 'calc(100vh - 80px)'
+            }}
+          >
             
-            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
-              <div className="flex items-center gap-3">
-                <h3 className="text-white font-semibold">Notificaciones</h3>
+            <div className="flex items-center justify-between p-3 border-b border-white/10 bg-white/5">
+              <div className="flex items-center gap-2">
+                <h3 className="text-white font-semibold text-sm">Notificaciones</h3>
                 <span className="text-xs text-white/60">{safeUnreadCount} sin leer</span>
               </div>
-              
+
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => { setRefreshing(true); fetchNotifications({ force: true }) }}
@@ -280,7 +290,7 @@ export default function NotificationBell() {
                 {safeUnreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
-                    className="px-2 py-1 text-xs text-white/60 hover:text-white transition-colors rounded-md hover:bg-white/10"
+                    className="px-2 py-1.5 text-xs text-white/60 hover:text-white transition-colors rounded-md hover:bg-white/10"
                   >
                     <Check className="w-3.5 h-3.5" />
                   </button>
